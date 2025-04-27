@@ -15,3 +15,9 @@ Application de comptabilité avec un backend en Spring Boot et un frontend en Re
 
 ## Installation
 (À compléter ultérieurement)
+
+## Lancement avec Docker
+1. Assurez-vous que Docker est installé.
+2. Depuis le dossier `docker/` :
+   ```bash
+   docker-compose up --build
