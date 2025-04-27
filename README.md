@@ -375,19 +375,13 @@ Créez une pull request sur GitHub pour que l’équipe valide.
 
 
 
-📚 En savoir plus
+## 📚 En savoir plus
 
-
-
-
-
-Consultez docs/installation.md pour des détails techniques.
-
-
-
-Lisez docs/git-workflow.md pour comprendre notre flux Git.
-
-
+Consultez les guides dans `docs/` pour des détails :
+- [**Installation**](./docs/installation.md) : Configurer l’environnement et lancer le projet.
+- [**Flux Git**](./docs/git-workflow.md) : Comment contribuer avec Git.
+- [**Architecture**](./docs/architecture.md) : Comprendre les composants techniques.
+- [**Scripts**](./docs/scripts.md) : Utiliser les scripts d’automatisation.
 
 Posez vos questions à l’équipe !
 
