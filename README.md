@@ -179,5 +179,23 @@ Architecture : Comprendre les composants techniques.
 
 Scripts : Utiliser les scripts d’automatisation.
 
+
+
+
+## Pour la partie authentification 
+**User.java** : Fournit des getters/setters et constructeurs pour gérer les entités utilisateur dans la base de données.
+
+**AccountCredentials.java** : Fournit des getters implicites pour les identifiants envoyés par le client.
+
+**LoginUserController.java** : Gère l'authentification via /login et renvoie un token JWT.
+
+**JwtService.java** : Crée et valide les tokens JWT pour sécuriser les requêtes.
+
+**UseImpl.java**: Charge les détails des utilisateurs pour l'authentification.
+
+**AuthentificationFilter.java** : Valide les tokens JWT dans les requêtes protégées.
+
+**SecurityConfig.java** : Configure les règles de sécurité, CORS, et les composants d'authentification.
+
 Prêt à explorer Comptel ?
 Lancez les scripts et plongez dans l’aventure ! 🚀
