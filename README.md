@@ -14,7 +14,9 @@ Application de comptabilité avec un backend en Spring Boot et un frontend en Re
 - Docker
 
 ## Installation
-Suivez les instructions dans `docs/installation.md` pour configurer le projet avec Docker ou localement.
+
+(À compléter ultérieurement)
+
 
 ## Lancement avec Docker
 1. Assurez-vous que Docker est installé.

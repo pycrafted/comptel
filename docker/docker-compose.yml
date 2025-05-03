@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/comptel
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=comptel2025
+    depends_on:
+      - db
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=comptel
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=your_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pg.origin:
