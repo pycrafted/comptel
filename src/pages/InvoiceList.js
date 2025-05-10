@@ -1,116 +1,154 @@
-import React, { useEffect, useState } from 'react';
-import { getInvoices, deleteInvoice } from '../services/api';
-import {
+import React, { useState } from 'react';
+import { 
+  Box,
+  Paper,
+  Typography,
+  Button,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Typography,
   IconButton,
-  Fade,
-  Box,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  Add as AddIcon,
+  Search as SearchIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 const InvoiceList = () => {
-  const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Exemple de données (à remplacer par vos données réelles)
+  const [invoices] = useState([
+    {
+      id: 1,
+      number: 'FACT-2025-001',
+      date: '2025-04-19',
+      client: 'Client Example',
+      amount: 150000,
+      status: 'Payée'
+    },
+    // Ajoutez d'autres factures ici
+  ]);
 
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
-  const fetchInvoices = async () => {
-    try {
-      const response = await getInvoices();
-      setInvoices(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Erreur lors du chargement des factures:', error);
-      setLoading(false);
-    }
+  const handleAddInvoice = () => {
+    navigate('/add-invoice');
   };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Voulez-vous vraiment supprimer cette facture ?')) {
-      try {
-        await deleteInvoice(id);
-        setInvoices(invoices.filter((invoice) => invoice.id !== id));
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-      }
-    }
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ textAlign: 'center', mt: 4 }}>
-        <Typography variant="h6" color="textSecondary">
-          Chargement...
-        </Typography>
-      </Box>
-    );
-  }
 
   return (
-    <Fade in={!loading}>
-      <Box>
-        <Typography variant="h2" gutterBottom sx={{ color: '#202124' }}>
-          Liste des factures
+    <Box>
+      {/* En-tête */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: 3
+      }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 500 }}>
+          Liste des Factures
         </Typography>
-        {invoices.length === 0 ? (
-          <Typography variant="body1" color="textSecondary">
-            Aucune facture disponible.
-          </Typography>
-        ) : (
-          <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f1f3f4' }}>
-                  <TableCell>Référence</TableCell>
-                  <TableCell>Client</TableCell>
-                  <TableCell>Total</TableCell>
-                  <TableCell>Solde</TableCell>
-                  <TableCell>Payé</TableCell>
-                  <TableCell>Livré</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow
-                    key={invoice.id}
-                    hover
-                    sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}
-                  >
-                    <TableCell>{invoice.reference}</TableCell>
-                    <TableCell>{invoice.customer}</TableCell>
-                    <TableCell>{invoice.total}</TableCell>
-                    <TableCell>{invoice.balance}</TableCell>
-                    <TableCell>{invoice.paid}</TableCell>
-                    <TableCell>{invoice.delivered}</TableCell>
-                    <TableCell>{new Date(invoice.invoiceDateTime).toLocaleString()}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        color="secondary"
-                        onClick={() => handleDelete(invoice.id)}
-                        aria-label="Supprimer"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleAddInvoice}
+          sx={{ 
+            bgcolor: 'primary.main',
+            '&:hover': { bgcolor: 'primary.dark' }
+          }}
+        >
+          Nouvelle Facture
+        </Button>
       </Box>
-    </Fade>
+
+      {/* Barre de recherche */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Rechercher une facture..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          size="small"
+        />
+      </Paper>
+
+      {/* Tableau des factures */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'primary.main' }}>
+              <TableCell sx={{ color: 'white' }}>N° Facture</TableCell>
+              <TableCell sx={{ color: 'white' }}>Date</TableCell>
+              <TableCell sx={{ color: 'white' }}>Client</TableCell>
+              <TableCell sx={{ color: 'white' }}>Montant</TableCell>
+              <TableCell sx={{ color: 'white' }}>Statut</TableCell>
+              <TableCell sx={{ color: 'white' }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {invoices
+              .filter(invoice => 
+                invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                invoice.client.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((invoice) => (
+                <TableRow key={invoice.id} hover>
+                  <TableCell>{invoice.number}</TableCell>
+                  <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{invoice.client}</TableCell>
+                  <TableCell>
+                    {invoice.amount.toLocaleString('fr-FR', {
+                      style: 'currency',
+                      currency: 'XOF'
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <Box
+                      sx={{
+                        bgcolor: invoice.status === 'Payée' ? 'success.light' : 'warning.light',
+                        color: 'white',
+                        py: 0.5,
+                        px: 1,
+                        borderRadius: 1,
+                        display: 'inline-block'
+                      }}
+                    >
+                      {invoice.status}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" color="primary" title="Voir">
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton size="small" color="primary" title="Modifier">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton size="small" color="error" title="Supprimer">
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 
