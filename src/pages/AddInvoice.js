@@ -29,6 +29,15 @@ const AddInvoice = () => {
     amountPaid: '',
     paymentDate: '',
   });
+  
+  // État pour le panneau de paiement
+  const [paymentData, setPaymentData] = useState({
+    ticketNumber: '8000',
+    modePaiement: '',
+    montantPaiement: '0',
+    datePaiement: '',
+  });
+
   const [services, setServices] = useState([]);
   const [nextReference, setNextReference] = useState(null);
   const [settings, setSettings] = useState({});
@@ -60,6 +69,14 @@ const AddInvoice = () => {
     });
   };
 
+  const handlePaymentChange = (e) => {
+    const { name, value } = e.target;
+    setPaymentData({
+      ...paymentData,
+      [name]: value,
+    });
+  };
+
   const handleServiceChange = (index, field, value) => {
     const updatedArray = [...formData[field]];
     updatedArray[index] = field === 'quantites' ? parseInt(value) || 1 : value;
@@ -79,7 +96,7 @@ const AddInvoice = () => {
     e.preventDefault();
     try {
       const response = await createInvoice(formData);
-      alert('Facture créée avec succès ! Référence: ' + response.data.reference); // Utilisation de response
+      alert('Facture créée avec succès ! Référence: ' + response.data.reference);
       setFormData({
         customer: '',
         telephone: '',
@@ -98,144 +115,294 @@ const AddInvoice = () => {
     }
   };
 
+  const handlePaymentSubmit = () => {
+    console.log('Données de paiement:', paymentData);
+    alert('Paiement enregistré !');
+  };
+
+  // Composant PaymentPanel intégré
+  const PaymentPanel = () => (
+    <Paper 
+      sx={{ 
+        p: 3, 
+        backgroundColor: '#4a5568', 
+        color: 'white',
+        borderRadius: 2,
+        minWidth: '280px',
+        maxWidth: '320px',
+        height: 'fit-content'
+      }}
+    >
+      {/* Header Ticket */}
+      <Box sx={{ textAlign: 'center', mb: 3 }}>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            backgroundColor: '#2d3748', 
+            py: 0.5, 
+            borderRadius: '4px 4px 0 0',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            letterSpacing: '1px'
+          }}
+        >
+          TICKET N°
+        </Typography>
+        <Box 
+          sx={{ 
+            backgroundColor: '#00ff00', 
+            color: '#000', 
+            py: 1.5,
+            borderRadius: '0 0 4px 4px',
+            fontSize: '24px',
+            fontWeight: 'bold'
+          }}
+        >
+          {paymentData.ticketNumber}
+        </Box>
+      </Box>
+
+      {/* Formulaire de paiement */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            Mode de Paiement
+          </Typography>
+          <FormControl fullWidth>
+            <Select
+              name="modePaiement"
+              value={paymentData.modePaiement}
+              onChange={handlePaymentChange}
+              displayEmpty
+              sx={{
+                backgroundColor: 'white',
+                borderRadius: 1,
+                '& .MuiSelect-select': {
+                  color: '#333',
+                  py: 1.5
+                }
+              }}
+            >
+              <MenuItem value="">Sélectionnez...</MenuItem>
+              <MenuItem value="WAVE">Wave</MenuItem>
+              <MenuItem value="OM">Orange Money</MenuItem>
+              <MenuItem value="CASH">Espèces</MenuItem>
+              <MenuItem value="CARD">Carte</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            Montant Paiement
+          </Typography>
+          <TextField
+            name="montantPaiement"
+            value={paymentData.montantPaiement}
+            onChange={handlePaymentChange}
+            type="number"
+            fullWidth
+            InputProps={{
+              sx: {
+                backgroundColor: 'white',
+                borderRadius: 1,
+                '& input': {
+                  color: '#333',
+                  py: 1.5
+                }
+              }
+            }}
+          />
+        </Box>
+
+        <Box>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            Date de Paiement
+          </Typography>
+          <TextField
+            name="datePaiement"
+            value={paymentData.datePaiement}
+            onChange={handlePaymentChange}
+            type="datetime-local"
+            fullWidth
+            InputProps={{
+              sx: {
+                backgroundColor: 'white',
+                borderRadius: 1,
+                '& input': {
+                  color: '#333',
+                  py: 1.5
+                }
+              }
+            }}
+          />
+        </Box>
+
+        <Button
+          onClick={handlePaymentSubmit}
+          variant="contained"
+          fullWidth
+          sx={{
+            backgroundColor: '#3182ce',
+            '&:hover': {
+              backgroundColor: '#2c5aa0'
+            },
+            py: 1.5,
+            mt: 2,
+            fontWeight: 'bold',
+            borderRadius: 1
+          }}
+        >
+          Enregistrer
+        </Button>
+      </Box>
+    </Paper>
+  );
+
   return (
     <Fade in={true}>
-      <Paper sx={{ p: 4, borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxWidth: '800px', mx: 'auto' }}>
-        <Typography variant="h2" gutterBottom sx={{ color: '#202124' }}>
-          Ajouter une facture (Réf: {nextReference})
-        </Typography>
-        <form onSubmit={handleSubmit}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Client"
-              name="customer"
-              value={formData.customer}
-              onChange={handleChange}
-              required
-              variant="outlined"
-              fullWidth
-            />
-            <TextField
-              label="Téléphone"
-              name="telephone"
-              value={formData.telephone}
-              onChange={handleChange}
-              variant="outlined"
-              fullWidth
-            />
-            {settings.useDeliveryConfirmation && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    name="delivered"
-                    checked={formData.delivered}
-                    onChange={handleChange}
-                    color="primary"
-                  />
-                }
-                label="Livré"
-              />
-            )}
-            {settings.useAntidate && (
+      <Box sx={{ display: 'flex', gap: 10, maxWidth: '1200px', mx: 'auto', p: 3 }}>
+        {/* Formulaire principal */}
+        <Paper sx={{ p: 4, borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', flex: 1, mr: 15 }}>
+          <Typography variant="h2" gutterBottom sx={{ color: '#202124' }}>
+            Ajouter une facture (Réf: {nextReference})
+          </Typography>
+          <form onSubmit={handleSubmit}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <TextField
-                label="Date de la facture"
-                type="datetime-local"
-                name="invoiceDateTime"
-                value={formData.invoiceDateTime}
+                label="Client"
+                name="customer"
+                value={formData.customer}
                 onChange={handleChange}
-                InputLabelProps={{ shrink: true }}
+                required
                 variant="outlined"
                 fullWidth
               />
-            )}
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Services
-            </Typography>
-            {formData.serviceIds.map((serviceId, index) => (
-              <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <FormControl fullWidth>
-                  <InputLabel>Service</InputLabel>
-                  <Select
-                    value={serviceId}
-                    onChange={(e) => handleServiceChange(index, 'serviceIds', e.target.value)}
-                    label="Service"
-                  >
-                    <MenuItem value="">Sélectionner un service</MenuItem>
-                    {services.map((service) => (
-                      <MenuItem key={service.id} value={service.id}>
-                        {service.designation} ({service.prix})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  label="Quantité"
-                  type="number"
-                  value={formData.quantites[index]}
-                  onChange={(e) => handleServiceChange(index, 'quantites', e.target.value)}
-                  variant="outlined"
-                  sx={{ width: '100px' }}
-                  inputProps={{ min: 1 }}
+              <TextField
+                label="Téléphone"
+                name="telephone"
+                value={formData.telephone}
+                onChange={handleChange}
+                variant="outlined"
+                fullWidth
+              />
+              {settings.useDeliveryConfirmation && (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      name="delivered"
+                      checked={formData.delivered}
+                      onChange={handleChange}
+                      color="primary"
+                    />
+                  }
+                  label="Livré"
                 />
+              )}
+              {settings.useAntidate && (
                 <TextField
-                  label="Prix"
-                  value={formData.prixs[index]}
-                  onChange={(e) => handleServiceChange(index, 'prixs', e.target.value)}
-                  variant="outlined"
-                  sx={{ width: '150px' }}
-                />,,
-              </Box>
-            ))}
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={addServiceRow}
-              sx={{ alignSelf: 'flex-start' }}
-            >
-              Ajouter un service
-            </Button>
-            {settings.usePartialPayment && (
-              <>
-                <FormControl fullWidth>
-                  <InputLabel>Mode de paiement</InputLabel>
-                  <Select
-                    name="modePaiement"
-                    value={formData.modePaiement}
-                    onChange={handleChange}
-                    label="Mode de paiement"
-                  >
-                    <MenuItem value="">Sélectionner</MenuItem>
-                    <MenuItem value="WAVE">Wave</MenuItem>
-                    <MenuItem value="OM">Orange Money</MenuItem>
-                    <MenuItem value="CASH">Espèces</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField
-                  label="Montant payé"
-                  name="amountPaid"
-                  value={formData.amountPaid}
-                  onChange={handleChange}
-                  variant="outlined"
-                  fullWidth
-                />
-                <TextField
-                  label="Date de paiement"
+                  label="Date de la facture"
                   type="datetime-local"
-                  name="paymentDate"
-                  value={formData.paymentDate}
+                  name="invoiceDateTime"
+                  value={formData.invoiceDateTime}
                   onChange={handleChange}
                   InputLabelProps={{ shrink: true }}
                   variant="outlined"
                   fullWidth
                 />
-              </>
-            )}
-            <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-              Créer la facture
-            </Button>
-          </Box>
-        </form>
-      </Paper>
+              )}
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Services
+              </Typography>
+              {formData.serviceIds.map((serviceId, index) => (
+                <Box key={index} sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Service</InputLabel>
+                    <Select
+                      value={serviceId}
+                      onChange={(e) => handleServiceChange(index, 'serviceIds', e.target.value)}
+                      label="Service"
+                    >
+                      <MenuItem value="">Sélectionner un service</MenuItem>
+                      {services.map((service) => (
+                        <MenuItem key={service.id} value={service.id}>
+                          {service.designation} ({service.prix})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label="Quantité"
+                    type="number"
+                    value={formData.quantites[index]}
+                    onChange={(e) => handleServiceChange(index, 'quantites', e.target.value)}
+                    variant="outlined"
+                    sx={{ width: '100px' }}
+                    inputProps={{ min: 1 }}
+                  />
+                  <TextField
+                    label="Prix"
+                    value={formData.prixs[index]}
+                    onChange={(e) => handleServiceChange(index, 'prixs', e.target.value)}
+                    variant="outlined"
+                    sx={{ width: '150px' }}
+                  />
+                </Box>
+              ))}
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addServiceRow}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                Ajouter un service
+              </Button>
+              {settings.usePartialPayment && (
+                <>
+                  <FormControl fullWidth>
+                    <InputLabel>Mode de paiement</InputLabel>
+                    <Select
+                      name="modePaiement"
+                      value={formData.modePaiement}
+                      onChange={handleChange}
+                      label="Mode de paiement"
+                    >
+                      <MenuItem value="">Sélectionner</MenuItem>
+                      <MenuItem value="WAVE">Wave</MenuItem>
+                      <MenuItem value="OM">Orange Money</MenuItem>
+                      <MenuItem value="CASH">Espèces</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label="Montant payé"
+                    name="amountPaid"
+                    value={formData.amountPaid}
+                    onChange={handleChange}
+                    variant="outlined"
+                    fullWidth
+                  />
+                  <TextField
+                    label="Date de paiement"
+                    type="datetime-local"
+                    name="paymentDate"
+                    value={formData.paymentDate}
+                    onChange={handleChange}
+                    InputLabelProps={{ shrink: true }}
+                    variant="outlined"
+                    fullWidth
+                  />
+                </>
+              )}
+              <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+                Créer la facture
+              </Button>
+            </Box>
+          </form>
+        </Paper>
+
+        {/* Panneau de paiement */}
+        <PaymentPanel />
+      </Box>
     </Fade>
   );
 };
