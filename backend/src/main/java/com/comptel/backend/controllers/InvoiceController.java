@@ -5,7 +5,9 @@ import com.comptel.backend.repository.GlobalSettingsRepository;
 import com.comptel.backend.repository.ServiceRepository;
 import com.comptel.backend.repository.UserRepository;
 import com.comptel.backend.services.InvoiceService;
+import com.sun.security.auth.UserPrincipal;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -125,19 +127,17 @@ public class InvoiceController {
             List<BigDecimal> prices = extractBigDecimalList(request, "prixs");
 
             // Extraction des paiements
-            Payment.ModePaiement paymentMode = parsePaymentMode((String) request.get("modePaiement"));
-            BigDecimal amountPaid = parseBigDecimal((String) request.get("amountPaid"));
+            Payment.ModePaiement paymentMode = parsePaymentMode((String) request.get("mode_paiement"));
+            BigDecimal amountPaid = parseBigDecimal((String) request.get("amountPaye"));
             LocalDateTime paymentDate = parseDateTime((String) request.get("paymentDate"));
 
             // Utilisateur temporaire (à remplacer plus tard)
-            User saveBy = userRepository.findById(1L)
-                    .orElseThrow(() -> new RuntimeException("Utilisateur par défaut non trouvé"));
+            User saveBy = userRepository.findById(1L).orElseThrow(() -> new RuntimeException("Utilisateur par défaut non trouvé"));
 
             // Création de la facture
-            Invoice invoice = invoiceService.createInvoice(
-                    customer, telephone, delivered, invoiceDateTime,
-                    serviceIds, quantities, prices,
-                    paymentMode, amountPaid, paymentDate, saveBy);
+            Invoice invoice = invoiceService.createInvoice(customer, telephone, delivered, invoiceDateTime,
+                                                            serviceIds, quantities, prices,
+                                                            paymentMode, amountPaid, paymentDate, saveBy);
 
             return ResponseEntity.ok(createSuccessResponse(invoice));
         } catch (Exception e) {
@@ -145,6 +145,30 @@ public class InvoiceController {
         }
     }
 
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> patchInvoce(@PathVariable Long id, @RequestBody Map<String, Object> body
+    ) {
+        try {
+            BigDecimal newAmountPaid = parseBigDecimal((String) body.get("amountPaye"));
+            LocalDateTime paymentDate = body.containsKey("paymentDate") ? LocalDateTime.parse(body.get("paymentDate").toString()) : LocalDateTime.now();
+            Payment.ModePaiement modePaiement = parsePaymentMode((String) body.get("mode_paiement"));
+            boolean livrer = Boolean.parseBoolean(body.get("livrer").toString());
+            boolean paiement      = Boolean.parseBoolean(body.get("paiement").toString());
+
+            // On récupère l'utilisateur courant
+            User saveBy = userRepository.findById(1L)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            Invoice updated = invoiceService.updateInvoicePayment(
+                    id, newAmountPaid, paymentDate, modePaiement, livrer, paiement, saveBy);
+
+            return ResponseEntity.ok(createSuccessResponse(updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
     // Méthodes utilitaires privées
 
     /**
@@ -209,6 +233,7 @@ public class InvoiceController {
         response.put("success", true);
         response.put("total", invoice.getTotal().toString());
         response.put("balance", invoice.getBalance().toString());
+        response.put("amount_paid", invoice.getAmountPaid().toString());
         response.put("customer", invoice.getCustomer());
         response.put("id", invoice.getId());
         response.put("reference", invoice.getReference());
