@@ -197,5 +197,8 @@ Scripts : Utiliser les scripts d’automatisation.
 
 **SecurityConfig.java** : Configure les règles de sécurité, CORS, et les composants d'authentification.
 
-Prêt à explorer Comptel ?
-Lancez les scripts et plongez dans l’aventure ! 🚀
+---
+
+# Particularités de la branche frontend/khadija
+
+Si la branche frontend/khadija apporte des instructions ou des spécificités pour le frontend (par exemple, configuration supplémentaire, dépendances, scripts, etc.), elles sont à intégrer ici. Sinon, la documentation principale ci-dessus reste valable pour tout le projet.
