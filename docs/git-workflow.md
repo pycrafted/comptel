@@ -9,8 +9,8 @@ develop : Intégration des fonctionnalités en cours.
 
 
 Branches de fonctionnalités :
-Ex. : feature/authentification, feature/authentification-backend, feature/authentification-frontend.
-Créez une branche pour chaque tâche (ex. : feature/<nom-tache>).
+feature/authentification, feature/authentification-backend, feature/authentification-frontend
+Nous avons créé une branche pour chaque tâche (ex. : feature/<nom-tache>).
 
 
 Règles de protection :

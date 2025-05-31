@@ -7,15 +7,25 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.startsWith;
 
+// Tests unitaires avec Mockito
 public class LoginUserControllerTest {
 
     @InjectMocks
@@ -67,5 +77,28 @@ public class LoginUserControllerTest {
         // Act & Assert
         assertThrows(RuntimeException.class, () -> loginUserController.getToken(credentials));
         verify(jwtService, never()).getToken(anyString());
+    }
+
+    // Test d'intégration avec MockMvc
+    @SpringBootTest
+    @AutoConfigureMockMvc
+    public static class LoginUserControllerIntegrationTest {
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private JwtService jwtService;
+
+        @Test
+        public void testLoginSuccess() throws Exception {
+            String credentials = "{\"username\": \"admin\", \"password\": \"admin\"}";
+            mockMvc.perform(post("/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(credentials))
+                    .andExpect(status().isOk())
+                    .andExpect(header().exists("Authorization"))
+                    .andExpect(header().string("Authorization", startsWith("Bearer ")));
+        }
     }
 }
