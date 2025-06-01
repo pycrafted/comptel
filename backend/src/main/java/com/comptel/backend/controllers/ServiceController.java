@@ -4,6 +4,8 @@ package com.comptel.backend.controllers;
 import com.comptel.backend.entity.Service;
 import com.comptel.backend.repository.ServiceRepository;
 import com.comptel.backend.services.ServiceF;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/services")
 public class ServiceController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ServiceController.class);
     private final ServiceRepository serviceRepository;
     private final ServiceF ServiceEntityServ;
 
@@ -66,10 +69,10 @@ public class ServiceController {
      */
     @PostMapping
     public ResponseEntity<Map<String, Object>> CreatService(@RequestBody Map<String, Object> request){
+        logger.info("Tentative d'ajout de service avec données : {}", request);
         try {
             // Extraction des données de la requête
             String designation = (String) request.get("designation");
-//            BigDecimal prix = (BigDecimal) request.get("prix");
             Object prixObj = request.get("prix");
             BigDecimal prix = prixObj instanceof Number ? new BigDecimal(prixObj.toString()) : (BigDecimal) prixObj;
             String proposition = (String) request.get("proposition");
@@ -78,8 +81,10 @@ public class ServiceController {
             Service Service = ServiceEntityServ.CreateServiceEntity(
                     designation, prix, proposition);
 
+            logger.info("Service ajouté avec succès : {}", Service);
             return ResponseEntity.ok(createSuccessResponse(Service));
         } catch (Exception e) {
+            logger.error("Erreur lors de l'ajout du service : {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(createErrorResponse(e));
         }
     }

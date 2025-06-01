@@ -1,8 +1,13 @@
-Write-Host "Vérification des prérequis pour Comptel..."
+Write-Host "Vérification des prérequis pour Comptel..." -ForegroundColor Cyan
 
 # Vérifier Java 21
-if (-not (Get-Command java -ErrorAction SilentlyContinue) -or (-not (java -version 2>&1 | Select-String "21."))) {
-    Write-Host "Erreur : Java 21 est requis. Installez-le depuis https://adoptium.net/" -ForegroundColor Red
+Write-Host "- Vérification de Java 21..." -ForegroundColor Yellow
+if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
+    Write-Host "Java n'est pas installé ou non trouvé dans le PATH." -ForegroundColor Red
+    Write-Host "Téléchargez Java 21 ici : https://adoptium.net/" -ForegroundColor Yellow
+    exit 1
+} elseif (-not (java -version 2>&1 | Select-String "21.")) {
+    Write-Host "Java trouvé, mais la version n'est pas 21. Installez Java 21 depuis https://adoptium.net/" -ForegroundColor Red
     exit 1
 } else {
     $javaVersion = (java -version 2>&1 | Select-Object -First 1)
@@ -10,8 +15,13 @@ if (-not (Get-Command java -ErrorAction SilentlyContinue) -or (-not (java -versi
 }
 
 # Vérifier Node.js 16+
-if (-not (Get-Command node -ErrorAction SilentlyContinue) -or (-not (node -v | Select-String "v1[6-9]\.|v[2-9][0-9]\."))) {
-    Write-Host "Erreur : Node.js 16+ est requis. Installez-le depuis https://nodejs.org/" -ForegroundColor Red
+Write-Host "- Vérification de Node.js 16+..." -ForegroundColor Yellow
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Host "Node.js n'est pas installé ou non trouvé dans le PATH." -ForegroundColor Red
+    Write-Host "Téléchargez Node.js 16+ ici : https://nodejs.org/" -ForegroundColor Yellow
+    exit 1
+} elseif (-not (node -v | Select-String "v1[6-9]\\.|v[2-9][0-9]\\.")) {
+    Write-Host "Node.js trouvé, mais la version est trop ancienne. Installez Node.js 16 ou supérieur." -ForegroundColor Red
     exit 1
 } else {
     $nodeVersion = (node -v)
@@ -19,8 +29,10 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue) -or (-not (node -v | S
 }
 
 # Vérifier npm
+Write-Host "- Vérification de npm..." -ForegroundColor Yellow
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    Write-Host "Erreur : npm est requis." -ForegroundColor Red
+    Write-Host "npm n'est pas installé ou non trouvé dans le PATH." -ForegroundColor Red
+    Write-Host "npm est inclus avec Node.js. Réinstallez Node.js si besoin." -ForegroundColor Yellow
     exit 1
 } else {
     $npmVersion = (npm -v)
@@ -28,12 +40,17 @@ if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
 }
 
 # Vérifier Docker
-if (-not (Get-Command docker -ErrorAction SilentlyContinue) -or (-not (docker info --format '{{.ServerVersion}}' 2>$null))) {
-    Write-Host "Erreur : Docker est requis et doit être en cours d'exécution. Installez Docker Desktop." -ForegroundColor Red
+Write-Host "- Vérification de Docker..." -ForegroundColor Yellow
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    Write-Host "Docker n'est pas installé ou non trouvé dans le PATH." -ForegroundColor Red
+    Write-Host "Téléchargez Docker Desktop ici : https://www.docker.com/products/docker-desktop/" -ForegroundColor Yellow
+    exit 1
+} elseif (-not (docker info --format '{{.ServerVersion}}' 2>$null)) {
+    Write-Host "Docker est installé mais ne semble pas démarré. Lancez Docker Desktop puis réessayez." -ForegroundColor Red
     exit 1
 } else {
     $dockerVersion = (docker --version)
     Write-Host "Docker OK : $dockerVersion" -ForegroundColor Green
 }
 
-Write-Host "Tous les prérequis sont satisfaits !" -ForegroundColor Green
+Write-Host "\nTous les prérequis sont satisfaits !" -ForegroundColor Cyan

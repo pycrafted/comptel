@@ -162,9 +162,11 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Ajout de CORS
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/services/**").permitAll() // Autorise tout le monde sur /api/services
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
-                ).addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                )
+                .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(Customizer.withDefaults())
                 .logout(logout -> logout
                         .logoutUrl("/api/logout")
@@ -213,13 +215,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.addAllowedOrigin("*"); // Permet toutes les origines pour les tests
-        configuration.addAllowedMethod("*");
-        configuration.addAllowedHeader("*");
+        configuration.setAllowedOrigins(java.util.Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
         configuration.addExposedHeader("Authorization");
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/api/**", configuration);
         return source;
     }
 }

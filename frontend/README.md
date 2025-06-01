@@ -1,70 +1,208 @@
-# Getting Started with Create React App
+# Comptel
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+[![codecov](https://codecov.io/gh/pycrafted/comptel/branch/develop/graph/badge.svg)](https://codecov.io/gh/pycrafted/comptel)
 
-## Available Scripts
+🌟 Bienvenue dans Comptel ! 🌟
+Comptel est une application moderne de comptabilité conçue pour simplifier la gestion financière.
+Avec un backend robuste en Spring Boot et une interface élégante en React, elle est facile à utiliser et à configurer.
+Ce guide vous accompagne pas à pas pour démarrer, même si vous n’êtes pas expert en informatique ! 🚀
 
-In the project directory, you can run:
+🎯 À quoi sert ce projet ?
+Comptel vous permet de :
 
-### `npm start`
+Gérer vos comptes,
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Suivre vos transactions,
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Générer des rapports financiers.
 
-### `npm test`
+Que vous soyez développeur ou novice, l’installation et le lancement sont aussi simples qu’un clic ! 😊
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+📂 Structure du projet
+backend/ : Le cœur de l’application (gère les données et la logique).
 
-### `npm run build`
+frontend/ : L’interface que vous voyez (formulaires, tableaux, etc.).
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+docker/ : Fichiers pour lancer l’application facilement avec Docker.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+scripts/ : Scripts magiques pour automatiser tout ! ✨
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+docs/ : Guides détaillés pour en savoir plus.
 
-### `npm run eject`
+🛠️ Prérequis
+Avant de commencer, assurez-vous d’avoir installé :
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Java 21
+➔ Télécharger ici (Adoptium) (choisissez JDK 21).
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Node.js 16+
+➔ Télécharger ici (Node.js).
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Docker Desktop
+➔ Télécharger ici (Docker).
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Pas sûr d’avoir tout ? Nos scripts vérifieront pour vous. 😎
 
-## Learn More
+🚀 Démarrer en 3 étapes simples
+1. 📥 Cloner le projet
+Ouvrez un terminal :
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Windows : Cherchez "Git Bash".
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Mac/Linux : Ouvrez "Terminal".
 
-### Code Splitting
+Clonez le projet :
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+bash
+Copier
+Modifier
+git clone git@github.com:pycrafted/comptel.git
+cd comptel
+2. ⚙️ Configurer automatiquement
+Exécutez le script adapté :
 
-### Analyzing the Bundle Size
+Windows :
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+bash
+Copier
+Modifier
+.\scripts\setup.ps1
+Mac/Linux :
 
-### Making a Progressive Web App
+bash
+Copier
+Modifier
+./scripts/setup.sh
+Ce script :
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Vérifie que Java, Node.js et Docker sont installés,
 
-### Advanced Configuration
+Télécharge les dépendances backend et frontend,
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Prépare les branches Git.
 
-### Deployment
+Si vous voyez "Configuration terminée !", tout est prêt ! 🎉
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+3. ▶️ Lancer l’application
+Deux options s’offrent à vous :
 
-### `npm run build` fails to minify
+Option 1 : Lancer localement
+Windows :
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+bash
+Copier
+Modifier
+.\scripts\start.ps1
+Mac/Linux :
+
+bash
+Copier
+Modifier
+./scripts/start.sh
+Cela lance :
+
+Backend : http://localhost:8080
+
+Frontend : http://localhost:3000
+
+Pour arrêter : Ctrl+C dans le terminal.
+
+Option 2 : Lancer avec Docker (recommandé)
+Windows :
+
+bash
+Copier
+Modifier
+.\scripts\docker-start.ps1
+Mac/Linux :
+
+bash
+Copier
+Modifier
+./scripts/docker-start.sh
+Ce script :
+
+Construit et lance tous les services,
+
+Configure automatiquement une base de données PostgreSQL.
+
+Une fois lancé :
+
+Backend : http://localhost:8080
+
+Frontend : http://localhost:3000
+
+Pour arrêter :
+
+bash
+Copier
+Modifier
+cd docker
+docker-compose down
+🧰 Scripts utiles
+
+Action	Windows	Mac/Linux	Description
+Vérifier les prérequis	.\scripts\check-prereqs.ps1	./scripts/check-prereqs.sh	Vérifie que Java, Node.js et Docker sont prêts.
+Configurer le projet	.\scripts\setup.ps1	./scripts/setup.sh	Installe toutes les dépendances nécessaires.
+Lancer localement	.\scripts\start.ps1	./scripts/start.sh	Démarre backend et frontend sur votre machine.
+Lancer avec Docker	.\scripts\docker-start.ps1	./scripts/docker-start.sh	Lance tout via Docker (backend, frontend, BDD).
+🐛 Que faire si ça ne marche pas ?
+Erreur dans un script : Vérifiez les messages affichés, ils indiquent souvent ce qui manque.
+
+Problème de port : Si 8080 ou 3000 est occupé, fermez d’autres applications ou contactez l’équipe.
+
+Besoin d’aide : Consultez le dossier docs/ ou contactez l’équipe via [canal à insérer, ex. Slack].
+
+🌈 Contribuer à Comptel
+Envie d’ajouter une fonctionnalité ou corriger un bug ?
+
+Créez une branche spécifique :
+
+bash
+Copier
+Modifier
+git checkout -b feature/ma-super-fonctionnalite
+Poussez vos modifications :
+
+bash
+Copier
+Modifier
+git add .
+git commit -m "Description claire du changement"
+git push origin feature/ma-super-fonctionnalite
+Créez une pull request sur GitHub.
+
+📚 En savoir plus
+Découvrez les guides dans docs/ :
+
+Installation : Configurer l’environnement et lancer le projet.
+
+Flux Git : Comment contribuer avec Git.
+
+Architecture : Comprendre les composants techniques.
+
+Scripts : Utiliser les scripts d’automatisation.
+
+
+
+
+## Pour la partie authentification 
+**User.java** : Fournit des getters/setters et constructeurs pour gérer les entités utilisateur dans la base de données.
+
+**AccountCredentials.java** : Fournit des getters implicites pour les identifiants envoyés par le client.
+
+**LoginUserController.java** : Gère l'authentification via /login et renvoie un token JWT.
+
+**JwtService.java** : Crée et valide les tokens JWT pour sécuriser les requêtes.
+
+**UseImpl.java**: Charge les détails des utilisateurs pour l'authentification.
+
+**AuthentificationFilter.java** : Valide les tokens JWT dans les requêtes protégées.
+
+**SecurityConfig.java** : Configure les règles de sécurité, CORS, et les composants d'authentification.
+
+---
+
+# Particularités de la branche frontend/khadija
+
+Si la branche frontend/khadija apporte des instructions ou des spécificités pour le frontend (par exemple, configuration supplémentaire, dépendances, scripts, etc.), elles sont à intégrer ici. Sinon, la documentation principale ci-dessus reste valable pour tout le projet.
