@@ -50,13 +50,13 @@ jobs:
           mvn clean verify -Dspring.datasource.url=jdbc:postgresql://localhost:5432/comptel -Dspring.datasource.username=postgres -Dspring.datasource.password=${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Upload backend coverage report (JaCoCo)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
           path: backend/target/site/jacoco
 
       - name: Upload JUnit test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: junit-test-results
           path: backend/target/surefire-reports/

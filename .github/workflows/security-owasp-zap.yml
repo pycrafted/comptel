@@ -1,4 +1,4 @@
-name: OWASP ZAP API Scan
+name: Backend Security Scan (OWASP ZAP)
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
           fail_action: false
           report_html: true
       - name: Upload ZAP report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zap-report
           path: report_html.html 
