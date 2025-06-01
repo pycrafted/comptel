@@ -1,6 +1,9 @@
+# Ce fichier est désactivé temporairement pour debug. Renommez-le en .yml pour le réactiver.
+
 name: Backend CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ develop, main ]
   pull_request:

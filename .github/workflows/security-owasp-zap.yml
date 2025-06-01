@@ -1,4 +1,4 @@
-name: Backend Security Scan (OWASP ZAP)
+name: Backend Security Scan (OWASP ZAP)                 
 
 on:
   push:

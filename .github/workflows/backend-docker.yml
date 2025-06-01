@@ -1,8 +1,9 @@
+# Ce fichier est désactivé temporairement pour debug. Renommez-le en .yml pour le réactiver.
+
 name: Backend Docker Image
 
 on:
-  push:
-    branches: [ main, develop ]
+  workflow_dispatch:
 
 jobs:
   build-and-push-docker:
