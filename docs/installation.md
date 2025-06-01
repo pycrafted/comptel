@@ -1,10 +1,10 @@
 📦 Installation de Comptel
-Ce guide explique comment configurer votre environnement pour travailler sur Comptel. Suivez ces étapes pour installer les outils nécessaires, cloner le projet, et le lancer. Pas besoin d’être un expert, on vous guide pas à pas ! 😊
+
+Ce guide explique comment configurer et lancer Comptel de façon professionnelle, en privilégiant l'utilisation d'images Docker pré-construites pour le backend et le frontend, et l'image officielle pour la base de données.
 
 🛠️ Prérequis
-Vous aurez besoin de ces outils sur votre ordinateur :
-
-Java 21 :
+- **Docker Desktop** (recommandé)
+- (Pour développement local : Java 21, Node.js 16+, Git)
 
 Téléchargez le JDK 21 depuis Adoptium.
 Installez et vérifiez :java -version
@@ -74,50 +74,38 @@ Installe les dépendances backend (Maven) et frontend (npm).
 Met à jour les branches Git.
 
 
-▶️ Lancer le projet
-Option 1 : Localement
-Pour lancer le backend et le frontend sur votre machine :
+▶️ Lancer Comptel avec Docker (recommandé)
 
-Windows :.\scripts\start.ps1
+1. Placez-vous dans le dossier `docker/` :
+   ```sh
+   cd docker
+   ```
+2. Téléchargez les images et démarrez la stack :
+   ```sh
+   docker-compose pull
+   docker-compose up -d
+   ```
+3. Accédez à :
+   - Backend : http://localhost:8080
+   - Frontend : http://localhost:3000
 
-
-Mac/Linux :./scripts/start.sh
-
-
-
-Accédez à :
-
-Backend : http://localhost:8080
-Frontend : http://localhost:3000
-
-Arrêtez avec Ctrl+C.
-Option 2 : Avec Docker (recommandé)
-Pour lancer tout (backend, frontend, base de données) :
-
-Windows :.\scripts\docker-start.ps1
-
-
-Mac/Linux :./scripts/docker-start.sh
-
-
-
-Accédez à :
-
-Backend : http://localhost:8080
-Frontend : http://localhost:3000
-
-Arrêtez :
+Pour arrêter :
+```sh
 cd docker
 docker-compose down
+```
 
+💡 **Pourquoi cette méthode ?**
+- Plus besoin de builder localement : images prêtes à l'emploi.
+- Images identiques pour tous (dev, CI, prod).
+- Base de données sécurisée et maintenue (Postgres officielle).
+
+▶️ Lancer localement (pour développement)
+Voir la section "Développement local" ou docs/scripts.md pour les scripts d'automatisation.
 
 🐛 Dépannage
+- Problème Docker : Vérifiez que Docker Desktop est lancé.
+- Port occupé : Fermez les applications utilisant 8080 ou 3000.
+- Problème d'authentification : Consultez la documentation sur l'authentification JWT.
 
-Erreur de prérequis : Vérifiez les messages du script check-prereqs.
-Port occupé (8080, 3000) :netstat -aon | findstr :8080
-taskkill /PID <PID> /F
-
-
-Problème Git : Assurez-vous que votre authentification (HTTPS ou SSH) est configurée.
-
-Besoin d’aide ? Contactez l’équipe !
+Pour toute question, contactez l'équipe ou ouvrez une issue sur GitHub.

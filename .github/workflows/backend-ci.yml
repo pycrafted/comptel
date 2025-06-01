@@ -1,4 +1,4 @@
-name: Backend & Frontend CI
+name: Backend CI
 
 on:
   push:
@@ -7,61 +7,112 @@ on:
     branches: [ develop, main ]
 
 jobs:
-  build-and-test:
+  backend-quality-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: comptel
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v3
-      with:
-        java-version: '21'
-        distribution: 'adopt'
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
-    - name: Lint backend (Checkstyle)
-      run: mvn checkstyle:check --file backend/pom.xml
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
 
-    - name: Build backend with Maven (JaCoCo)
-      run: mvn -B clean verify --file backend/pom.xml
+      - name: Lint backend (Checkstyle)
+        run: mvn checkstyle:check --file backend/pom.xml
 
-    - name: Upload backend coverage report (JaCoCo)
-      uses: actions/upload-artifact@v3
-      with:
-        name: jacoco-report
-        path: backend/target/site/jacoco
+      - name: Build and test with Maven (JaCoCo)
+        run: |
+          cd backend
+          mvn clean verify -Dspring.datasource.url=jdbc:postgresql://localhost:5432/comptel -Dspring.datasource.username=postgres -Dspring.datasource.password=${{ secrets.POSTGRES_PASSWORD }}
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      - name: Upload backend coverage report (JaCoCo)
+        uses: actions/upload-artifact@v3
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco
 
-    - name: Install frontend dependencies
-      run: npm install
-      working-directory: frontend
+      - name: Upload JUnit test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-test-results
+          path: backend/target/surefire-reports/
 
-    - name: Lint frontend (eslint)
-      run: npx eslint .
-      working-directory: frontend
+      - name: Static code analysis (SpotBugs)
+        run: mvn com.github.spotbugs:spotbugs-maven-plugin:spotbugs --file backend/pom.xml
 
-    - name: Run frontend tests with coverage
-      run: npm test -- --coverage --watchAll=false
-      working-directory: frontend
+      - name: Scan Maven dependencies (Trivy)
+        uses: aquasecurity/trivy-action@v0.16.0
+        with:
+          scan-type: fs
+          scan-ref: ./backend
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
 
-    - name: Upload frontend coverage report
-      uses: actions/upload-artifact@v3
-      with:
-        name: frontend-coverage
-        path: frontend/coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/target/site/jacoco/jacoco.xml
+          flags: backend
+          fail_ci_if_error: false
 
-    - name: Build frontend
-      run: npm run build
-      working-directory: frontend
+      - name: Fail if JaCoCo coverage < 80%
+        run: |
+          COVERAGE=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@covered)" backend/target/site/jacoco/jacoco.xml)
+          MISSED=$(xmllint --xpath "string(//report/counter[@type='INSTRUCTION']/@missed)" backend/target/site/jacoco/jacoco.xml)
+          TOTAL=$((COVERAGE + MISSED))
+          if [ "$TOTAL" -eq 0 ]; then echo "No coverage data found"; exit 1; fi
+          PERCENT=$(( 100 * COVERAGE / TOTAL ))
+          echo "Coverage: $PERCENT%"
+          if [ "$PERCENT" -lt 80 ]; then echo "Coverage below 80%!"; exit 1; fi
+        shell: bash
+        env:
+          COVERAGE_FILE: backend/target/site/jacoco/jacoco.xml
+        continue-on-error: false
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: backend/target/site/jacoco/jacoco.xml,frontend/coverage/lcov.info
-        flags: backend,frontend
-        fail_ci_if_error: false
+  notify-on-failure:
+    needs: backend-quality-test
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Gmail notification on failure
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASS }}
+          subject: "[CI] Echec du build Backend Comptel"
+          to: abdoulayelah@esp.sn, moustaf478@gmail.com, ndeyekharytoure@esp.sn, khadijatouba@esp.sn
+          from: ${{ secrets.GMAIL_USER }}
+          body: |
+            Le build CI du backend Comptel a échoué.
+            Repo: ${{ github.repository }}
+            Branch: ${{ github.ref }}
+            Auteur: ${{ github.actor }}
+            Lien vers le run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
