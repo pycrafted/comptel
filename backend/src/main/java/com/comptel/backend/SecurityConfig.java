@@ -162,6 +162,7 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Ajout de CORS
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health").permitAll() // Autorise l'accès public à l'endpoint health
                         .requestMatchers("/api/services/**").permitAll() // Autorise tout le monde sur /api/services
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
