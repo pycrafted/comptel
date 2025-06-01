@@ -8,6 +8,19 @@ jobs:
   zap_scan:
     runs-on: ubuntu-latest
     services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_DB: comptel
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       backend:
         image: abdoulayelah/comptel-backend:latest
         ports:

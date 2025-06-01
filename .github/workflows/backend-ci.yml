@@ -65,7 +65,7 @@ jobs:
         run: mvn com.github.spotbugs:spotbugs-maven-plugin:spotbugs --file backend/pom.xml
 
       - name: Scan Maven dependencies (Trivy)
-        uses: aquasecurity/trivy-action@v0.16.0
+        uses: aquasecurity/trivy-action@v0.20.0
         with:
           scan-type: fs
           scan-ref: ./backend
