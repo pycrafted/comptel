@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       backend:
-        image: ${{ secrets.DOCKERHUB_USERNAME }}/comptel-backend:latest
+        image: abdoulayelah/comptel-backend:latest
         ports:
           - 8080:8080
         options: >-
