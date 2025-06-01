@@ -19,5 +19,6 @@ export const getInvoices = () => api.get('/invoices');
 export const getAddInvoiceData = () => api.get('/invoices/add');
 export const createInvoice = (data) => api.post('/invoices', data);
 export const deleteInvoice = (id) => api.delete(`/invoices/${id}`);
+export const updateInvoicePayment = (id, data) => api.patch(`/invoices/${id}`, data);
 
 export default api;

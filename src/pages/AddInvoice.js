@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAddInvoiceData, createInvoice } from '../services/api';
+import { getAddInvoiceData, createInvoice, updateInvoicePayment } from '../services/api';
 import {
   Box,
   Typography,
@@ -13,6 +13,8 @@ import {
   FormControl,
   Fade,
   Paper,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 
@@ -41,6 +43,11 @@ const AddInvoice = () => {
   const [services, setServices] = useState([]);
   const [nextReference, setNextReference] = useState(null);
   const [settings, setSettings] = useState({});
+  const [lastInvoiceId, setLastInvoiceId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [openErrorSnackbar, setOpenErrorSnackbar] = useState(false);
 
   useEffect(() => {
     fetchAddInvoiceData();
@@ -96,7 +103,9 @@ const AddInvoice = () => {
     e.preventDefault();
     try {
       const response = await createInvoice(formData);
-      alert('Facture créée avec succès ! Référence: ' + response.data.reference);
+      setLastInvoiceId(response.data.id);
+      setSuccessMessage('Facture créée avec succès ! Référence: ' + response.data.reference);
+      setOpenSnackbar(true);
       setFormData({
         customer: '',
         telephone: '',
@@ -111,13 +120,30 @@ const AddInvoice = () => {
       });
     } catch (error) {
       console.error('Erreur lors de la création de la facture:', error);
-      alert('Erreur lors de la création de la facture.');
+      setErrorMessage('Erreur lors de la création de la facture. Vérifiez les champs et réessayez.');
+      setOpenErrorSnackbar(true);
     }
   };
 
-  const handlePaymentSubmit = () => {
-    console.log('Données de paiement:', paymentData);
-    alert('Paiement enregistré !');
+  const handlePaymentSubmit = async () => {
+    if (!lastInvoiceId) {
+      alert('Veuillez d’abord créer une facture.');
+      return;
+    }
+    try {
+      const paymentPayload = {
+        amountPaye: paymentData.montantPaiement,
+        paymentDate: paymentData.datePaiement,
+        mode_paiement: paymentData.modePaiement,
+        livrer: true,
+        paiement: true
+      };
+      await updateInvoicePayment(lastInvoiceId, paymentPayload);
+      alert('Paiement enregistré sur la facture !');
+    } catch (error) {
+      console.error('Erreur lors de l’enregistrement du paiement:', error);
+      alert('Erreur lors de l’enregistrement du paiement.');
+    }
   };
 
   // Composant PaymentPanel intégré
@@ -402,6 +428,17 @@ const AddInvoice = () => {
 
         {/* Panneau de paiement */}
         <PaymentPanel />
+
+        <Snackbar open={openSnackbar} autoHideDuration={4000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+          <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
+            {successMessage}
+          </Alert>
+        </Snackbar>
+        <Snackbar open={openErrorSnackbar} autoHideDuration={5000} onClose={() => setOpenErrorSnackbar(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+          <Alert onClose={() => setOpenErrorSnackbar(false)} severity="error" sx={{ width: '100%' }}>
+            {errorMessage}
+          </Alert>
+        </Snackbar>
       </Box>
     </Fade>
   );

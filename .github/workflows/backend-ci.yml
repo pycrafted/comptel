@@ -1,4 +1,4 @@
-name: Backend CI
+name: Backend & Frontend CI
 
 on:
   push:
@@ -19,8 +19,49 @@ jobs:
         java-version: '21'
         distribution: 'adopt'
 
-    - name: Build with Maven
-      run: mvn -B package --file backend/pom.xml
+    - name: Lint backend (Checkstyle)
+      run: mvn checkstyle:check --file backend/pom.xml
 
-    - name: Run tests
-      run: mvn -B test --file backend/pom.xml
+    - name: Build backend with Maven (JaCoCo)
+      run: mvn -B clean verify --file backend/pom.xml
+
+    - name: Upload backend coverage report (JaCoCo)
+      uses: actions/upload-artifact@v3
+      with:
+        name: jacoco-report
+        path: backend/target/site/jacoco
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install frontend dependencies
+      run: npm install
+      working-directory: frontend
+
+    - name: Lint frontend (eslint)
+      run: npx eslint .
+      working-directory: frontend
+
+    - name: Run frontend tests with coverage
+      run: npm test -- --coverage --watchAll=false
+      working-directory: frontend
+
+    - name: Upload frontend coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-coverage
+        path: frontend/coverage
+
+    - name: Build frontend
+      run: npm run build
+      working-directory: frontend
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: backend/target/site/jacoco/jacoco.xml,frontend/coverage/lcov.info
+        flags: backend,frontend
+        fail_ci_if_error: false

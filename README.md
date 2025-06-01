@@ -1,3 +1,7 @@
+# Comptel
+
+[![codecov](https://codecov.io/gh/pycrafted/comptel/branch/develop/graph/badge.svg)](https://codecov.io/gh/pycrafted/comptel)
+
 🌟 Bienvenue dans Comptel ! 🌟
 Comptel est une application moderne de comptabilité conçue pour simplifier la gestion financière.
 Avec un backend robuste en Spring Boot et une interface élégante en React, elle est facile à utiliser et à configurer.

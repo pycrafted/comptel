@@ -19,6 +19,8 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import axios from 'axios';
+import { API_URL } from '../../config';
 
 // Animations variants
 const containerVariants = {
@@ -68,6 +70,8 @@ const Login = () => {
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -76,10 +80,29 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Tentative de connexion avec:', formData);
-    navigate('/dashboard');
+    setError('');
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${API_URL.replace(/\/api$/, '')}/login`,
+        formData,
+        { validateStatus: () => true }
+      );
+      const authHeader = response.headers['authorization'] || response.headers['Authorization'];
+      if (response.status === 200 && authHeader && authHeader.startsWith('Bearer ')) {
+        localStorage.setItem('jwt', authHeader);
+        setLoading(false);
+        navigate('/dashboard');
+      } else {
+        setError("Identifiants invalides ou serveur injoignable.");
+        setLoading(false);
+      }
+    } catch (err) {
+      setError("Erreur de connexion au serveur.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -196,6 +219,12 @@ const Login = () => {
               sx={{ mb: 3 }}
             />
 
+            {error && (
+              <Typography color="error" align="center" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+            )}
+
             <MotionButton
               component={motion.button}
               variants={buttonVariants}
@@ -213,8 +242,9 @@ const Login = () => {
                 textTransform: 'none',
                 borderRadius: 2,
               }}
+              disabled={loading}
             >
-              Se connecter
+              {loading ? 'Connexion...' : 'Se connecter'}
             </MotionButton>
 
             <motion.div
