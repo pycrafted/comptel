@@ -15,7 +15,7 @@ import Receipt from './pages/Receipt';
 import Journal from './pages/Journal';
 import Depense from './pages/Depense';
 import Bilan from './pages/Bilan';
-import Settings from './pages/Settings';
+import Settings from './pages/parametre';
 
 // Thème personnalisé inspiré de Google/YouTube
 const theme = createTheme({
