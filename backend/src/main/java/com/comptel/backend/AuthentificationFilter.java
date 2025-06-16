@@ -8,9 +8,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Collections;
 
 /**
  * Ce filtre personnalisé valide les tokens JWT dans les requêtes.
@@ -45,16 +49,27 @@ public class AuthentificationFilter extends OncePerRequestFilter {
      */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, java.io.IOException {
-        // Récupérer le token depuis l'en-tête Authorization
-        String jws = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (jws != null) {
-            // Vérifier le token et obtenir l'utilisateur
-            String user = jwtService.getAuthUser(request);
-            // Authentifier l'utilisateur
-            Authentication authentication = new UsernamePasswordAuthenticationToken(user, null, java.util.Collections.emptyList());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            throws ServletException, IOException {
+        String token = request.getHeader(HttpHeaders.AUTHORIZATION);
+        
+        if (token != null && token.startsWith("Bearer ")) {
+            String username = jwtService.getAuthUser(request);
+            if (username != null) {
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                );
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
+        
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.equals("/api/login") || path.equals("/actuator/health");
     }
 }

@@ -6,6 +6,7 @@ import com.comptel.backend.repository.ServiceRepository;
 import com.comptel.backend.repository.UserRepository;
 import com.comptel.backend.services.InvoiceService;
 import com.sun.security.auth.UserPrincipal;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -169,6 +170,43 @@ public class InvoiceController {
                     .body(Map.of("success", false, "error", e.getMessage()));
         }
     }
+
+    @GetMapping("/by-date-range")
+    public ResponseEntity<List<Map<String, Object>>> getInvoicesByDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        List<Invoice> invoices = invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end);
+        List<Map<String, Object>> response = invoices.stream()
+                .map(this::mapInvoiceToResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/totals/by-date-range")
+    public ResponseEntity<Map<String, Object>> getTotalsByDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        List<Invoice> invoices = invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end);
+        
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalPaid = BigDecimal.ZERO;
+        BigDecimal totalBalance = BigDecimal.ZERO;
+        
+        for (Invoice invoice : invoices) {
+            totalAmount = totalAmount.add(invoice.getTotal());
+            totalPaid = totalPaid.add(invoice.getAmountPaid());
+            totalBalance = totalBalance.add(invoice.getBalance());
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalAmount", totalAmount.toString());
+        response.put("totalPaid", totalPaid.toString());
+        response.put("totalBalance", totalBalance.toString());
+        response.put("invoiceCount", invoices.size());
+        
+        return ResponseEntity.ok(response);
+    }
+
     // Méthodes utilitaires privées
 
     /**

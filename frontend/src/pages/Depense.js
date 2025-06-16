@@ -1,310 +1,328 @@
-// src/pages/Depense.jsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Grid,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Alert,
   IconButton,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  Box,
-  Alert,
-  MenuItem,
-  Grid,
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Close as CloseIcon,
-} from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { exitApi } from '../services/api';
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  borderRight: '1px solid white',
-  '&:first-of-type': {
-    borderLeft: '1px solid black !important',
-  },
-  '&:last-of-type': {
-    borderRight: '1px solid black !important',
-  },
-  backgroundColor: theme.palette.grey[900],
-  color: theme.palette.common.white,
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    '& fieldset': {
-      borderRadius: theme.shape.borderRadius,
-    },
-  },
-}));
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(amount);
+};
 
 const Depense = () => {
-  const [monthFilter, setMonthFilter] = useState(
-    new Date().toISOString().slice(0, 7)
-  );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [openModal, setOpenModal] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
-  const [totalAmount, setTotalAmount] = useState(0);
-  
-  const [newDepense, setNewDepense] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    type: '',
-    intitule: '',
+  const navigate = useNavigate();
+  const [exits, setExits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedExit, setSelectedExit] = useState(null);
+  const [formData, setFormData] = useState({
     montant: '',
-    quantite: 1,
+    type: 'FIXE',
+    date: new Date().toISOString(),
+    description: '',
+  });
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)).toISOString(),
+    end: new Date().toISOString()
   });
 
-  const [depenses, setDepenses] = useState([
-    {
-      id: 1,
-      date_depense: '2025-05-18',
-      type: 'MATERIEL',
-      intitule: 'Fournitures',
-      montant: 5000,
-      quantite: 2,
-    },
-  ]);
-
-  const typeOptions = [
-    { value: 'MATERIEL', label: 'Matériel' },
-    { value: 'SERVICE', label: 'Service' },
-    { value: 'AUTRE', label: 'Autre' },
-  ];
-
-  const calculateTotal = useCallback(() => {
-    const filteredDepenses = depenses.filter(depense => 
-      depense.intitule.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      depense.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      new Date(depense.date_depense).toLocaleDateString().includes(searchQuery)
-    );
-    
-    const total = filteredDepenses.reduce((acc, depense) => 
-      acc + (depense.montant * depense.quantite), 0
-    );
-    setTotalAmount(total);
-  }, [depenses, searchQuery]);
-
   useEffect(() => {
-    calculateTotal();
-  }, [calculateTotal]);
+    fetchExits();
+  }, [dateRange, fetchExits]);
 
-  const handleSubmit = useCallback((e) => {
+  const validateDateRange = () => {
+    const start = new Date(dateRange.start);
+    const end = new Date(dateRange.end);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      setError('Les dates sont invalides');
+      return false;
+    }
+    
+    if (start > end) {
+      setError('La date de début doit être antérieure à la date de fin');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleDateRangeChange = (field, value) => {
+    setDateRange(prev => ({ ...prev, [field]: value }));
+    if (validateDateRange()) {
+      fetchExits();
+    }
+  };
+
+  const fetchExits = async () => {
+    try {
+      setLoading(true);
+      const response = await exitApi.getByDateRange(dateRange.start, dateRange.end);
+      setExits(response.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors du chargement des sorties');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFormChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newId = depenses.length + 1;
-    setDepenses(prev => [...prev, { ...newDepense, id: newId }]);
-    setOpenModal(false);
-    setShowAlert(true);
-    setNewDepense({
-      date: new Date().toISOString().slice(0, 10),
-      type: '',
-      intitule: '',
-      montant: '',
-      quantite: 1,
+    try {
+      setLoading(true);
+      if (selectedExit) {
+        await exitApi.update(selectedExit.id, formData);
+      } else {
+        await exitApi.create(formData);
+      }
+      setOpenDialog(false);
+      setSelectedExit(null);
+      setFormData({
+        montant: '',
+        type: 'FIXE',
+        date: new Date().toISOString(),
+        description: '',
+      });
+      fetchExits();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de l\'enregistrement de la sortie');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (exit) => {
+    setSelectedExit(exit);
+    setFormData({
+      montant: exit.montant,
+      type: exit.type,
+      date: exit.date,
+      description: exit.description,
     });
-    setTimeout(() => setShowAlert(false), 3000);
-  }, [depenses, newDepense]);
+    setOpenDialog(true);
+  };
 
-  const formatDate = useCallback((dateString) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
-  }, []);
+  const handleDelete = (exit) => {
+    setSelectedExit(exit);
+    setOpenDialog(true);
+  };
 
-  const formatCurrency = useCallback((amount) => {
-    return `${amount.toLocaleString('fr-FR')} FCFA`;
-  }, []);
+  const confirmDelete = async () => {
+    try {
+      setLoading(true);
+      await exitApi.delete(selectedExit.id);
+      setExits(exits.filter(exit => exit.id !== selectedExit.id));
+      setOpenDialog(false);
+      setSelectedExit(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de la suppression de la sortie');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotal = () => {
+    return exits.reduce((sum, exit) => sum + exit.montant, 0);
+  };
+
+  if (loading) {
+    return (
+      <Container>
+        <Typography>Chargement...</Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {showAlert && (
-        <Alert 
-          severity="info" 
-          sx={{ mb: 2 }}
-          onClose={() => setShowAlert(false)}
-        >
-          Nouvelle dépense ajoutée avec succès
-        </Alert>
-      )}
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" component="h2">
+                Sorties
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setSelectedExit(null);
+                  setFormData({
+                    montant: '',
+                    type: 'FIXE',
+                    date: new Date().toISOString(),
+                    description: '',
+                  });
+                  setOpenDialog(true);
+                }}
+              >
+                Nouvelle Sortie
+              </Button>
+            </Box>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <StyledTextField
-            type="month"
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            fullWidth
-            size="small"
-          />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <StyledTextField
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              size="small"
-              sx={{ width: '200px' }}
-            />
-            <IconButton 
-              onClick={() => setOpenModal(true)}
-              title="Ajouter une nouvelle charge"
-              color="primary"
-            >
-              <EditIcon />
-            </IconButton>
-          </Box>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Date de début"
+                  type="datetime-local"
+                  value={dateRange.start}
+                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!error && error.includes('date de début')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Date de fin"
+                  type="datetime-local"
+                  value={dateRange.end}
+                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!error && error.includes('date de fin')}
+                />
+              </Grid>
+            </Grid>
+
+            {error && (
+              <Typography color="error" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+            )}
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Montant</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {exits.map((exit) => (
+                    <TableRow key={exit.id}>
+                      <TableCell>{new Date(exit.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{exit.description}</TableCell>
+                      <TableCell>{formatCurrency(exit.montant)}</TableCell>
+                      <TableCell>{exit.type}</TableCell>
+                      <TableCell>
+                        <IconButton onClick={() => handleEdit(exit)} color="primary">
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(exit)} color="error">
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow>
+                    <TableCell colSpan={2}><strong>Total</strong></TableCell>
+                    <TableCell colSpan={3}><strong>{formatCurrency(calculateTotal())}</strong></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
         </Grid>
       </Grid>
 
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <StyledTableCell>DATE</StyledTableCell>
-              <StyledTableCell>TYPE</StyledTableCell>
-              <StyledTableCell>INTITULÉ</StyledTableCell>
-              <StyledTableCell className="d-none d-md-table-cell">UNITÉ</StyledTableCell>
-              <StyledTableCell className="d-none d-md-table-cell">QUANTITÉ</StyledTableCell>
-              <StyledTableCell>TOTAL</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {depenses
-              .filter(depense => 
-                depense.intitule.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                depense.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                formatDate(depense.date_depense).includes(searchQuery)
-              )
-              .map((depense) => (
-                <TableRow key={depense.id}>
-                  <TableCell>{formatDate(depense.date_depense)}</TableCell>
-                  <TableCell>{depense.type}</TableCell>
-                  <TableCell>{depense.intitule}</TableCell>
-                  <TableCell className="d-none d-md-table-cell">
-                    {formatCurrency(depense.montant)}
-                  </TableCell>
-                  <TableCell className="d-none d-md-table-cell">
-                    {depense.quantite}
-                  </TableCell>
-                  <TableCell>
-                    {formatCurrency(depense.montant * depense.quantite)}
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Box sx={{ maxWidth: 380, ml: 1 }}>
-        <Paper elevation={3}>
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell 
-                  sx={{ 
-                    backgroundColor: '#E7E6E6',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}
-                >
-                  CHARGE MENSUELLE
-                </TableCell>
-                <TableCell sx={{ textAlign: 'center' }}>
-                  {formatCurrency(totalAmount)}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </Paper>
-      </Box>
-
-      <Dialog 
-        open={openModal} 
-        onClose={() => setOpenModal(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
-          Ajouter une nouvelle dépense
-          <IconButton
-            onClick={() => setOpenModal(false)}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            <CloseIcon />
-          </IconButton>
+          {selectedExit ? 'Modifier la sortie' : 'Nouvelle sortie'}
         </DialogTitle>
-        <form onSubmit={handleSubmit}>
-          <DialogContent>
-            <StyledTextField
-              margin="dense"
-              label="Date"
-              type="date"
-              fullWidth
-              value={newDepense.date}
-              onChange={(e) => setNewDepense({ ...newDepense, date: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              required
-            />
-            <StyledTextField
-              margin="dense"
-              label="Type"
-              select
-              fullWidth
-              value={newDepense.type}
-              onChange={(e) => setNewDepense({ ...newDepense, type: e.target.value })}
-              required
-            >
-              {typeOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </StyledTextField>
-            <StyledTextField
-              margin="dense"
-              label="Intitulé"
-              fullWidth
-              value={newDepense.intitule}
-              onChange={(e) => setNewDepense({ ...newDepense, intitule: e.target.value })}
-              required
-            />
-            <StyledTextField
-              margin="dense"
-              label="Montant unitaire"
-              type="number"
-              fullWidth
-              value={newDepense.montant}
-              onChange={(e) => setNewDepense({ ...newDepense, montant: e.target.value })}
-              required
-            />
-            <StyledTextField
-              margin="dense"
-              label="Quantité"
-              type="number"
-              fullWidth
-              value={newDepense.quantite}
-              onChange={(e) => setNewDepense({ ...newDepense, quantite: e.target.value })}
-              required
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenModal(false)}>Annuler</Button>
-            <Button type="submit" variant="contained" color="primary">
-              Enregistrer
-            </Button>
-          </DialogActions>
-        </form>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Montant"
+                type="number"
+                value={formData.montant}
+                onChange={(e) => handleFormChange('montant', parseFloat(e.target.value))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label="Type"
+                value={formData.type}
+                onChange={(e) => handleFormChange('type', e.target.value)}
+                required
+              >
+                <MenuItem value="FIXE">Fixe</MenuItem>
+                <MenuItem value="VARIABLE">Variable</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Date"
+                type="datetime-local"
+                value={formData.date}
+                onChange={(e) => handleFormChange('date', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={formData.description}
+                onChange={(e) => handleFormChange('description', e.target.value)}
+                required
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Annuler</Button>
+          <Button onClick={handleSubmit} color="primary">
+            {selectedExit ? 'Modifier' : 'Ajouter'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );
 };
 
-export default Depense;
+export default Depense; 
