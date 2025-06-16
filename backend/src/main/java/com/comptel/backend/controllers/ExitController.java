@@ -2,6 +2,8 @@ package com.comptel.backend.controllers;
 
 import com.comptel.backend.entity.Exit;
 import com.comptel.backend.services.ExitService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/exits")
 public class ExitController {
+    private static final Logger logger = LoggerFactory.getLogger(ExitController.class);
     private final ExitService exitService;
 
     public ExitController(ExitService exitService) {
@@ -64,15 +67,30 @@ public class ExitController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createExit(@RequestBody Map<String, Object> request) {
+        logger.info("Tentative de création d'une sortie avec les données: {}", request);
         try {
             String titre = (String) request.get("titre");
+            logger.debug("Titre extrait: {}", titre);
+            
             BigDecimal montant = new BigDecimal(request.get("montant").toString());
-            Exit.TypeDepense typeDepense = Exit.TypeDepense.valueOf((String) request.get("typeDepense"));
+            logger.debug("Montant extrait: {}", montant);
+            
+            String typeDepenseStr = (String) request.get("typeDepense");
+            logger.debug("Type de dépense extrait: {}", typeDepenseStr);
+            Exit.TypeDepense typeDepense = Exit.TypeDepense.valueOf(typeDepenseStr);
+            
             Long userId = Long.parseLong(request.get("userId").toString());
+            logger.debug("UserId extrait: {}", userId);
 
+            logger.info("Création de la sortie avec titre={}, montant={}, typeDepense={}, userId={}", 
+                titre, montant, typeDepense, userId);
+            
             Exit exit = exitService.createExit(titre, montant, typeDepense, userId);
+            logger.info("Sortie créée avec succès: {}", exit.getId());
+            
             return ResponseEntity.ok(createSuccessResponse(exit));
         } catch (Exception e) {
+            logger.error("Erreur lors de la création de la sortie", e);
             return ResponseEntity.badRequest().body(createErrorResponse(e));
         }
     }
@@ -125,6 +143,7 @@ public class ExitController {
     }
 
     private Map<String, Object> createErrorResponse(Exception e) {
+        logger.error("Création d'une réponse d'erreur pour: {}", e.getMessage());
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
         response.put("error", e.getMessage());

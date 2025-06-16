@@ -51,8 +51,8 @@ const InvoiceList = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)).toISOString().slice(0, 16),
-    end: new Date().toISOString().slice(0, 16)
+    start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().slice(0, 16),
+    end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 16)
   });
   const [totals, setTotals] = useState({
     totalAmount: '0',
@@ -68,12 +68,14 @@ const InvoiceList = () => {
   const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('Chargement des factures...');
       const response = await invoiceApi.getByDateRange(dateRange.start, dateRange.end);
+      console.log('Réponse du serveur:', response.data);
       setInvoices(response.data);
       setError(null);
     } catch (err) {
+      console.error('Erreur lors du chargement des factures:', err);
       setError(err.response?.data?.error || 'Erreur lors du chargement des factures');
-      console.error('Erreur:', err);
     } finally {
       setLoading(false);
     }
@@ -218,6 +220,19 @@ const InvoiceList = () => {
                   error={!!error && error.includes('date de fin')}
                 />
               </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setDateRange({
+                      start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().slice(0, 16),
+                      end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 16)
+                    });
+                  }}
+                >
+                  Réinitialiser la période
+                </Button>
+              </Grid>
             </Grid>
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -268,8 +283,8 @@ const InvoiceList = () => {
                       <TableCell>{formatCurrency(invoice.total)}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={invoice.isFullyPaid() ? 'Payée' : (invoice.balance.equals(invoice.total) ? 'Non payée' : 'En cours')}
-                          color={invoice.isFullyPaid() ? 'success' : (invoice.balance.equals(invoice.total) ? 'error' : 'warning')}
+                          label={invoice.paid}
+                          color={invoice.paid === 'Oui' ? 'success' : (invoice.paid === 'Non' ? 'error' : 'warning')}
                         />
                       </TableCell>
                       <TableCell>

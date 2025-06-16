@@ -256,10 +256,10 @@ const Receipt = () => {
                 <TableBody>
                   {inputs.map((input) => (
                     <TableRow key={input.id}>
-                      <TableCell>{new Date(input.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{input.description}</TableCell>
-                      <TableCell>{formatCurrency(input.montant)}</TableCell>
-                      <TableCell>{input.mode}</TableCell>
+                      <TableCell>{new Date(input.createdAts).toLocaleString('fr-FR')}</TableCell>
+                      <TableCell>{input.titres}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(input.montants))}</TableCell>
+                      <TableCell>{input.modePaiement}</TableCell>
                       <TableCell>
                         <IconButton onClick={() => handleEdit(input)} color="primary">
                           <EditIcon />
@@ -272,11 +272,26 @@ const Receipt = () => {
                   ))}
                   <TableRow>
                     <TableCell colSpan={2}><strong>Total</strong></TableCell>
-                    <TableCell colSpan={3}><strong>{formatCurrency(calculateTotal())}</strong></TableCell>
+                    <TableCell><strong>{formatCurrency(parseFloat(totals.total))}</strong></TableCell>
+                    <TableCell colSpan={2}></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
+
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6">Total par mode de paiement</Typography>
+              <Grid container spacing={2}>
+                {Object.entries(totals.byMode || {}).map(([mode, amount]) => (
+                  <Grid item xs={12} sm={4} key={mode}>
+                    <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'white' }}>
+                      <Typography variant="subtitle1">{mode.toUpperCase()}</Typography>
+                      <Typography variant="h6">{formatCurrency(parseFloat(amount))}</Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
           </Paper>
         </Grid>
       </Grid>

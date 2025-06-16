@@ -20,18 +20,23 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authApi.verifyToken(token);
       if (response.data) {
+        const { username, role, id } = response.data;
+        localStorage.setItem('userId', id);
         setUser({
           token,
-          username: response.data.username,
-          role: response.data.role
+          username,
+          role,
+          id
         });
       } else {
         localStorage.removeItem('token');
+        localStorage.removeItem('userId');
         setUser(null);
       }
     } catch (error) {
       console.error('Erreur de vérification du token:', error);
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       setUser(null);
     } finally {
       setLoading(false);
@@ -41,11 +46,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authApi.login(credentials);
-      const { token, username, role } = response.data;
+      const { token, username, role, id } = response.data;
       
       if (token) {
         localStorage.setItem('token', token);
-        setUser({ token, username, role });
+        localStorage.setItem('userId', id);
+        setUser({ token, username, role, id });
         return true;
       }
       return false;

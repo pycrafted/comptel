@@ -54,4 +54,10 @@ public class UseImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Utilisateur non trouvé: " + username);
         }
     }
+
+    public Long getUserIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+            .map(com.comptel.backend.entity.User::getId)
+            .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé: " + username));
+    }
 }

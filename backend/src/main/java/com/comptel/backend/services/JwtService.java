@@ -85,4 +85,29 @@ public class JwtService {
             return false;
         }
     }
+
+    /**
+     * Extrait le nom d'utilisateur d'un token JWT.
+     * @param token Le token JWT
+     * @return Le nom d'utilisateur extrait du token
+     * @throws Exception Si le token est invalide ou expiré
+     */
+    public String getUsernameFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+            // Vérifier si le token n'est pas expiré
+            if (claims.getExpiration().before(new Date())) {
+                throw new Exception("Token expiré");
+            }
+
+            return claims.getSubject();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'extraction du nom d'utilisateur du token: " + e.getMessage());
+        }
+    }
 }

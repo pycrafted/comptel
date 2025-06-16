@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -23,13 +23,35 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { exitApi } from '../services/api';
+import { exitApi, authApi } from '../services/api';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
-    currency: 'EUR'
+    currency: 'XOF'
   }).format(amount);
+};
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const DEPENSE_TYPES = {
+  RETRAIT: 'Retrait',
+  REPARATION: 'Réparation',
+  SALAIRE: 'Salaire',
+  FACTURE_EAU: 'Facture eau',
+  ELECTRICITE: 'Électricité',
+  PRODUIT_REPASSAGE: 'Produit repassage',
+  PRODUIT_LAVAGE: 'Produit lavage',
+  FRAIS_DIVERS: 'Frais divers'
 };
 
 const Depense = () => {
@@ -39,84 +61,154 @@ const Depense = () => {
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedExit, setSelectedExit] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
+    titre: '',
     montant: '',
-    type: 'FIXE',
-    date: new Date().toISOString(),
-    description: '',
+    typeDepense: 'RETRAIT',
   });
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)).toISOString(),
-    end: new Date().toISOString()
+    start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('.')[0],
+    end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('.')[0]
   });
 
+  const resetDateRange = () => {
+    setDateRange({
+      start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('.')[0],
+      end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('.')[0]
+    });
+  };
+
   useEffect(() => {
-    fetchExits();
-  }, [dateRange, fetchExits]);
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+        const response = await authApi.verifyToken();
+        setIsAuthenticated(response.data.valid);
+        if (!response.data.valid) {
+          navigate('/login');
+        }
+      } catch (err) {
+        console.error('Erreur de vérification du token:', err);
+        navigate('/login');
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
-  const validateDateRange = () => {
-    const start = new Date(dateRange.start);
-    const end = new Date(dateRange.end);
-    
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      setError('Les dates sont invalides');
-      return false;
+  const fetchExits = useCallback(async () => {
+    if (!isAuthenticated) {
+      console.log('Non authentifié, fetchExits ignoré');
+      return;
     }
     
-    if (start > end) {
-      setError('La date de début doit être antérieure à la date de fin');
-      return false;
-    }
-    
-    return true;
-  };
-
-  const handleDateRangeChange = (field, value) => {
-    setDateRange(prev => ({ ...prev, [field]: value }));
-    if (validateDateRange()) {
-      fetchExits();
-    }
-  };
-
-  const fetchExits = async () => {
     try {
+      console.log('Début fetchExits avec dateRange:', dateRange);
       setLoading(true);
       const response = await exitApi.getByDateRange(dateRange.start, dateRange.end);
+      console.log('Réponse fetchExits:', response.data);
       setExits(response.data);
       setError(null);
     } catch (err) {
+      console.error('Erreur fetchExits:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       setError(err.response?.data?.error || 'Erreur lors du chargement des sorties');
-      console.error('Erreur:', err);
     } finally {
       setLoading(false);
     }
+  }, [dateRange, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchExits();
+    }
+  }, [fetchExits, isAuthenticated]);
+
+  const handleDateRangeChange = (e) => {
+    const { name, value } = e.target;
+    setDateRange(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleFormChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Début handleSubmit - FormData:', formData);
+    
+    if (!isAuthenticated) {
+      console.log('Non authentifié, redirection vers login');
+      navigate('/login');
+      return;
+    }
+
     try {
       setLoading(true);
-      if (selectedExit) {
-        await exitApi.update(selectedExit.id, formData);
-      } else {
-        await exitApi.create(formData);
+      const userId = localStorage.getItem('userId');
+      console.log('UserId récupéré:', userId);
+      
+      if (!userId) {
+        console.error('UserId non trouvé dans localStorage');
+        throw new Error('Utilisateur non connecté');
       }
+
+      // Validation du montant
+      const montant = parseFloat(formData.montant);
+      console.log('Montant parsé:', montant);
+      
+      if (isNaN(montant) || montant <= 0) {
+        console.error('Montant invalide:', montant);
+        throw new Error('Le montant doit être un nombre positif');
+      }
+
+      const dataToSend = {
+        titre: formData.titre,
+        montant: montant,
+        typeDepense: formData.typeDepense,
+        userId: parseInt(userId, 10)
+      };
+      console.log('Données à envoyer:', dataToSend);
+
+      if (selectedExit) {
+        console.log('Mise à jour de la dépense existante:', selectedExit.id);
+        await exitApi.update(selectedExit.id, dataToSend);
+      } else {
+        console.log('Création d\'une nouvelle dépense');
+        await exitApi.create(dataToSend);
+      }
+      console.log('Opération réussie');
+      
       setOpenDialog(false);
       setSelectedExit(null);
       setFormData({
+        titre: '',
         montant: '',
-        type: 'FIXE',
-        date: new Date().toISOString(),
-        description: '',
+        typeDepense: 'RETRAIT'
       });
       fetchExits();
     } catch (err) {
-      setError(err.response?.data?.error || 'Erreur lors de l\'enregistrement de la sortie');
-      console.error('Erreur:', err);
+      console.error('Erreur détaillée:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        headers: err.response?.headers
+      });
+      setError(err.message || 'Erreur lors de l\'enregistrement de la sortie');
     } finally {
       setLoading(false);
     }
@@ -125,36 +217,22 @@ const Depense = () => {
   const handleEdit = (exit) => {
     setSelectedExit(exit);
     setFormData({
-      montant: exit.montant,
-      type: exit.type,
-      date: exit.date,
-      description: exit.description,
+      titre: exit.titre,
+      montant: exit.montant.toString(),
+      typeDepense: exit.typeDepense,
     });
     setOpenDialog(true);
   };
 
-  const handleDelete = (exit) => {
-    setSelectedExit(exit);
-    setOpenDialog(true);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      setLoading(true);
-      await exitApi.delete(selectedExit.id);
-      setExits(exits.filter(exit => exit.id !== selectedExit.id));
-      setOpenDialog(false);
-      setSelectedExit(null);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Erreur lors de la suppression de la sortie');
-      console.error('Erreur:', err);
-    } finally {
-      setLoading(false);
+  const handleDelete = async (id) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette sortie ?')) {
+      try {
+        await exitApi.delete(id);
+        fetchExits();
+      } catch (err) {
+        setError('Erreur lors de la suppression');
+      }
     }
-  };
-
-  const calculateTotal = () => {
-    return exits.reduce((sum, exit) => sum + exit.montant, 0);
   };
 
   if (loading) {
@@ -168,94 +246,100 @@ const Depense = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid xs={12}>
           <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" component="h2">
-                Sorties
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography component="h1" variant="h5">
+                Gestion des Dépenses
               </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setSelectedExit(null);
-                  setFormData({
-                    montant: '',
-                    type: 'FIXE',
-                    date: new Date().toISOString(),
-                    description: '',
-                  });
-                  setOpenDialog(true);
-                }}
-              >
-                Nouvelle Sortie
-              </Button>
+              <Box>
+                <Button
+                  variant="outlined"
+                  onClick={resetDateRange}
+                  sx={{ mr: 2 }}
+                >
+                  Réinitialiser la période
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setSelectedExit(null);
+                    setFormData({
+                      titre: '',
+                      montant: '',
+                      typeDepense: 'RETRAIT'
+                    });
+                    setOpenDialog(true);
+                  }}
+                >
+                  Nouvelle Dépense
+                </Button>
+              </Box>
             </Box>
 
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date de début"
-                  type="datetime-local"
-                  value={dateRange.start}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  error={!!error && error.includes('date de début')}
-                />
+            <Box sx={{ mb: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="datetime-local"
+                    label="Date de début"
+                    name="start"
+                    value={dateRange.start}
+                    onChange={handleDateRangeChange}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="datetime-local"
+                    label="Date de fin"
+                    name="end"
+                    value={dateRange.end}
+                    onChange={handleDateRangeChange}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date de fin"
-                  type="datetime-local"
-                  value={dateRange.end}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  error={!!error && error.includes('date de fin')}
-                />
-              </Grid>
-            </Grid>
+            </Box>
 
             {error && (
-              <Typography color="error" sx={{ mb: 2 }}>
+              <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
-              </Typography>
+              </Alert>
             )}
 
-            <TableContainer component={Paper}>
+            <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Montant</TableCell>
+                    <TableCell>Titre</TableCell>
                     <TableCell>Type</TableCell>
+                    <TableCell>Montant</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {exits.map((exit) => (
                     <TableRow key={exit.id}>
-                      <TableCell>{new Date(exit.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{exit.description}</TableCell>
+                      <TableCell>{formatDate(exit.createdAt)}</TableCell>
+                      <TableCell>{exit.titre}</TableCell>
+                      <TableCell>{DEPENSE_TYPES[exit.typeDepense]}</TableCell>
                       <TableCell>{formatCurrency(exit.montant)}</TableCell>
-                      <TableCell>{exit.type}</TableCell>
                       <TableCell>
                         <IconButton onClick={() => handleEdit(exit)} color="primary">
                           <EditIcon />
                         </IconButton>
-                        <IconButton onClick={() => handleDelete(exit)} color="error">
+                        <IconButton onClick={() => handleDelete(exit.id)} color="error">
                           <DeleteIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow>
-                    <TableCell colSpan={2}><strong>Total</strong></TableCell>
-                    <TableCell colSpan={3}><strong>{formatCurrency(calculateTotal())}</strong></TableCell>
-                  </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
@@ -265,58 +349,51 @@ const Depense = () => {
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
-          {selectedExit ? 'Modifier la sortie' : 'Nouvelle sortie'}
+          {selectedExit ? 'Modifier la Dépense' : 'Nouvelle Dépense'}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Montant"
-                type="number"
-                value={formData.montant}
-                onChange={(e) => handleFormChange('montant', parseFloat(e.target.value))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                select
-                label="Type"
-                value={formData.type}
-                onChange={(e) => handleFormChange('type', e.target.value)}
-                required
-              >
-                <MenuItem value="FIXE">Fixe</MenuItem>
-                <MenuItem value="VARIABLE">Variable</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Date"
-                type="datetime-local"
-                value={formData.date}
-                onChange={(e) => handleFormChange('date', e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                value={formData.description}
-                onChange={(e) => handleFormChange('description', e.target.value)}
-                required
-              />
-            </Grid>
-          </Grid>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Titre"
+              name="titre"
+              value={formData.titre}
+              onChange={handleInputChange}
+              required
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              label="Montant"
+              name="montant"
+              type="number"
+              value={formData.montant}
+              onChange={handleInputChange}
+              required
+              margin="normal"
+              inputProps={{ min: 0, step: 0.01 }}
+            />
+            <TextField
+              fullWidth
+              select
+              label="Type de Dépense"
+              name="typeDepense"
+              value={formData.typeDepense}
+              onChange={handleInputChange}
+              required
+              margin="normal"
+            >
+              {Object.entries(DEPENSE_TYPES).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Annuler</Button>
-          <Button onClick={handleSubmit} color="primary">
+          <Button onClick={handleSubmit} variant="contained" color="primary">
             {selectedExit ? 'Modifier' : 'Ajouter'}
           </Button>
         </DialogActions>

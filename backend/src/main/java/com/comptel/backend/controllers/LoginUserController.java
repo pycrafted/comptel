@@ -82,6 +82,7 @@ public class LoginUserController {
             response.put("token", token);
             response.put("username", credentials.username());
             response.put("role", userService.loadUserByUsername(credentials.username()).getAuthorities());
+            response.put("id", userService.getUserIdByUsername(credentials.username()));
             
             return ResponseEntity.ok(response);
         } catch (AuthenticationException e) {
@@ -102,7 +103,13 @@ public class LoginUserController {
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
             if (jwtService.validateToken(token)) {
-                return ResponseEntity.ok().body(Map.of("valid", true));
+                String username = jwtService.getUsernameFromToken(token);
+                Map<String, Object> response = new HashMap<>();
+                response.put("valid", true);
+                response.put("username", username);
+                response.put("role", userService.loadUserByUsername(username).getAuthorities());
+                response.put("id", userService.getUserIdByUsername(username));
+                return ResponseEntity.ok().body(response);
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("valid", false));

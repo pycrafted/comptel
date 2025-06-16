@@ -112,6 +112,31 @@ public class InputController {
         }
     }
 
+    @GetMapping("/totals/by-date-range")
+    public ResponseEntity<Map<String, Object>> getTotalsByDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        List<Input> inputs = inputService.findByDateRange(start, end);
+        
+        BigDecimal total = BigDecimal.ZERO;
+        Map<String, BigDecimal> byMode = new HashMap<>();
+        
+        for (Input input : inputs) {
+            total = total.add(input.getMontants());
+            byMode.merge(input.getModePaiement().toString(), input.getMontants(), BigDecimal::add);
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("total", total.toString());
+        response.put("byMode", byMode.entrySet().stream()
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    e -> e.getValue().toString()
+                )));
+        
+        return ResponseEntity.ok(response);
+    }
+
     private Map<String, Object> mapInputToResponse(Input input) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", input.getId());

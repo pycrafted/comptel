@@ -10,17 +10,26 @@ const validatePrice = (price) => {
 };
 
 const validateDate = (date) => {
-  if (!date || !(date instanceof Date) || isNaN(date)) {
+  if (!date) {
     throw new Error('Date invalide');
   }
+  
+  // Accepter soit une chaîne ISO, soit un objet Date
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+    throw new Error('Date invalide');
+  }
+  
   return true;
 };
 
 const validateAmount = (amount) => {
-  if (typeof amount !== 'number' || isNaN(amount) || amount < 0) {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(numAmount) || numAmount <= 0) {
     throw new Error('Le montant doit être un nombre positif');
   }
-  return true;
+  return numAmount;
 };
 
 const validateInvoiceData = (data) => {
@@ -59,8 +68,10 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    console.log('Token trouvé:', token ? 'Oui' : 'Non');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Headers de la requête:', config.headers);
     }
     return config;
   },
@@ -181,28 +192,117 @@ export const inputApi = {
 
 // Sorties
 export const exitApi = {
-  getAll: () => api.get('/exits'),
-  getById: (id) => api.get(`/exits/${id}`),
+  getAll: () => {
+    console.log('exitApi.getAll appelé');
+    return api.get('/exits');
+  },
+  getById: (id) => {
+    console.log('exitApi.getById appelé avec id:', id);
+    return api.get(`/exits/${id}`);
+  },
   create: (data) => {
-    validateAmount(data.montant);
-    return api.post('/exits', data);
+    console.log('exitApi.create appelé avec données:', data);
+    try {
+      const validatedAmount = validateAmount(data.montant);
+      console.log('Montant validé:', validatedAmount);
+      const requestData = {
+        ...data,
+        montant: validatedAmount
+      };
+      console.log('Données de la requête:', requestData);
+      return api.post('/exits', requestData)
+        .then(response => {
+          console.log('Réponse create exit:', response.data);
+          return response;
+        })
+        .catch(error => {
+          console.error('Erreur create exit:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+          });
+          throw error;
+        });
+    } catch (error) {
+      console.error('Erreur de validation:', error);
+      throw error;
+    }
   },
   update: (id, data) => {
-    validateAmount(data.montant);
-    return api.put(`/exits/${id}`, data);
+    console.log('exitApi.update appelé avec id:', id, 'et données:', data);
+    try {
+      const validatedAmount = validateAmount(data.montant);
+      console.log('Montant validé:', validatedAmount);
+      const requestData = {
+        ...data,
+        montant: validatedAmount
+      };
+      console.log('Données de la requête:', requestData);
+      return api.put(`/exits/${id}`, requestData)
+        .then(response => {
+          console.log('Réponse update exit:', response.data);
+          return response;
+        })
+        .catch(error => {
+          console.error('Erreur update exit:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+          });
+          throw error;
+        });
+    } catch (error) {
+      console.error('Erreur de validation:', error);
+      throw error;
+    }
   },
-  delete: (id) => api.delete(`/exits/${id}`),
+  delete: (id) => {
+    console.log('exitApi.delete appelé avec id:', id);
+    return api.delete(`/exits/${id}`);
+  },
   getByDateRange: (start, end) => {
-    validateDate(new Date(start));
-    validateDate(new Date(end));
-    return api.get('/exits/by-date-range', { params: { start, end } });
+    console.log('exitApi.getByDateRange appelé avec start:', start, 'end:', end);
+    try {
+      validateDate(new Date(start));
+      validateDate(new Date(end));
+      return api.get('/exits/by-date-range', { params: { start, end } })
+        .then(response => {
+          console.log('Réponse getByDateRange:', response.data);
+          return response;
+        })
+        .catch(error => {
+          console.error('Erreur getByDateRange:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
+          throw error;
+        });
+    } catch (error) {
+      console.error('Erreur de validation des dates:', error);
+      throw error;
+    }
   },
-  getByType: (type) => api.get(`/exits/by-type/${type}`),
-  getByUser: (userId) => api.get(`/exits/by-user/${userId}`),
+  getByType: (type) => {
+    console.log('exitApi.getByType appelé avec type:', type);
+    return api.get(`/exits/by-type/${type}`);
+  },
+  getByUser: (userId) => {
+    console.log('exitApi.getByUser appelé avec userId:', userId);
+    return api.get(`/exits/by-user/${userId}`);
+  },
   getTotalByDateRange: (start, end) => {
-    validateDate(new Date(start));
-    validateDate(new Date(end));
-    return api.get('/exits/total-by-date-range', { params: { start, end } });
+    console.log('exitApi.getTotalByDateRange appelé avec start:', start, 'end:', end);
+    try {
+      validateDate(new Date(start));
+      validateDate(new Date(end));
+      return api.get('/exits/total-by-date-range', { params: { start, end } });
+    } catch (error) {
+      console.error('Erreur de validation des dates:', error);
+      throw error;
+    }
   },
 };
 
