@@ -1,5 +1,5 @@
 const config = {
-  apiUrl: "http://localhost:8080/api",
+  apiUrl: process.env.REACT_APP_API_URL || "https://comptel-backend.onrender.com/api",
   theme: {
     palette: {
       primary: {
