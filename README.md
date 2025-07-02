@@ -1,130 +1,170 @@
-# Comptel
+# Comptel - Application de Gestion Comptable
 
-[![Backend CI](https://github.com/pycrafted/comptel/actions/workflows/backend-ci.yml/badge.svg?branch=develop)](https://github.com/pycrafted/comptel/actions/workflows/backend-ci.yml)
-[![codecov](https://codecov.io/gh/pycrafted/comptel/branch/develop/graph/badge.svg)](https://codecov.io/gh/pycrafted/comptel)
+Application web complète pour la gestion comptable avec backend Spring Boot et frontend React.
 
----
+## 🚀 Déploiement sur Render
 
-# 🌟 Comptel – Plateforme de gestion comptable moderne
+### Option 1: Déploiement Automatique avec render.yaml (Recommandé)
 
-Comptel est une application de gestion financière complète, pensée pour la simplicité, la sécurité et la performance.
+1. **Forkez ou clonez ce repository**
+2. **Connectez-vous à Render** et créez un nouveau "Blueprint"
+3. **Sélectionnez votre repository** GitHub
+4. **Render détectera automatiquement** le fichier `render.yaml` et configurera tous les services
 
-- **Backend** : Spring Boot (Java 21)
-- **Frontend** : React
-- **Base de données** : PostgreSQL
-- **Orchestration** : Docker Compose
-- **CI/CD & Monitoring** : GitHub Actions, Prometheus, Grafana, ELK, Codecov
+### Option 2: Déploiement Manuel
 
----
+#### 1. Base de Données PostgreSQL
 
-## 🚀 Guide d'utilisation rapide
+1. Créez un nouveau service **PostgreSQL** sur Render
+2. Notez les informations de connexion (URL, username, password)
 
-### 1. Lancer la stack complète (dev, test, monitoring)
+#### 2. Backend Spring Boot
 
-```sh
-cd docker
-docker-compose pull
-docker-compose up -d
+1. Créez un nouveau service **Web Service**
+2. **Configuration:**
+   - **Environment**: Docker
+   - **Build Command**: (laissé vide, géré par Dockerfile)
+   - **Start Command**: (laissé vide, géré par Dockerfile)
+   - **Dockerfile Path**: `./backend/Dockerfile`
+   - **Docker Context**: `./backend`
+
+3. **Variables d'environnement:**
+   ```
+   SPRING_DATASOURCE_URL=<URL_DE_VOTRE_DB>
+   SPRING_DATASOURCE_USERNAME=<USERNAME_DE_VOTRE_DB>
+   SPRING_DATASOURCE_PASSWORD=<PASSWORD_DE_VOTRE_DB>
+   SPRING_JPA_HIBERNATE_DDL_AUTO=update
+   SPRING_JPA_SHOW_SQL=false
+   SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+   SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
+   SERVER_PORT=8080
+   ```
+
+4. **Health Check Path**: `/actuator/health`
+
+#### 3. Frontend React
+
+1. Créez un nouveau service **Web Service**
+2. **Configuration:**
+   - **Environment**: Docker
+   - **Build Command**: (laissé vide, géré par Dockerfile)
+   - **Start Command**: (laissé vide, géré par Dockerfile)
+   - **Dockerfile Path**: `./frontend/Dockerfile`
+   - **Docker Context**: `./frontend`
+
+3. **Variables d'environnement:**
+   ```
+   REACT_APP_API_URL=https://<nom-de-votre-backend>.onrender.com
+   NODE_ENV=production
+   ```
+
+4. **Health Check Path**: `/`
+
+## 📁 Structure du Projet
+
+```
+comptel/
+├── backend/                 # Application Spring Boot
+│   ├── Dockerfile          # Configuration Docker pour le backend
+│   ├── src/
+│   └── pom.xml
+├── frontend/               # Application React
+│   ├── Dockerfile          # Configuration Docker pour le frontend
+│   ├── nginx.conf          # Configuration Nginx
+│   ├── src/
+│   └── package.json
+├── docker/                 # Configuration Docker Compose (développement)
+├── render.yaml             # Configuration Render (production)
+└── README.md
 ```
 
-**Services accessibles :**
-- [Backend API](http://localhost:8080)
-- [Frontend](http://localhost:3000)
-- [Prometheus (métriques)](http://localhost:9090)
-- [Grafana (dashboards)](http://localhost:3001)
-- [Kibana (logs)](http://localhost:5601)
-- PostgreSQL : localhost:5432
+## 🔧 Configuration Avancée
 
-Pour arrêter :
-```sh
-docker-compose down
+### Variables d'environnement Backend
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `SPRING_DATASOURCE_URL` | URL de connexion à la base de données | `jdbc:postgresql://localhost:5432/comptel` |
+| `SPRING_DATASOURCE_USERNAME` | Nom d'utilisateur de la DB | `postgres` |
+| `SPRING_DATASOURCE_PASSWORD` | Mot de passe de la DB | `postgres` |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | Mode de création des tables | `update` |
+| `SPRING_JPA_SHOW_SQL` | Afficher les requêtes SQL | `false` |
+| `SERVER_PORT` | Port du serveur | `8080` |
+
+### Variables d'environnement Frontend
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `REACT_APP_API_URL` | URL de l'API backend | `http://localhost:8080/api` |
+| `NODE_ENV` | Environnement Node.js | `production` |
+
+## 🚀 Démarrage Rapide
+
+### Développement Local
+
+```bash
+# Backend
+cd backend
+./mvnw spring-boot:run
+
+# Frontend
+cd frontend
+npm install
+npm start
 ```
 
-### 2. Documentation API (Swagger)
-- [Swagger UI](http://localhost:8080/swagger-ui.html) : explorer et tester tous les endpoints
-- **Exemple d'appel API (curl) :**
-  ```sh
-  curl -X POST http://localhost:8080/login \
-    -H 'Content-Type: application/json' \
-    -d '{"username": "admin", "password": "admin"}'
-  ```
+### Production avec Docker
 
-### 3. CI/CD et qualité
-- **Build, tests, couverture, sécurité** : automatisés à chaque push/PR (voir l'onglet Actions GitHub)
-- **Changelog** : généré automatiquement à chaque release (onglet Releases)
-- **Notification d'échec** : mail envoyé à l'équipe en cas d'échec de build
+```bash
+# Build et démarrage complet
+docker-compose -f docker/docker-compose.yml up --build
+```
 
-### 4. Monitoring & logs
-- **Prometheus** : http://localhost:9090 (métriques backend)
-- **Grafana** : http://localhost:3001 (login : admin/admin)
-- **Kibana** : http://localhost:5601 (logs centralisés)
+## 📊 Monitoring
 
-### 5. Bonnes pratiques pour l'équipe
-- Ne jamais versionner de secrets (utiliser `.env` et GitHub Secrets)
-- Utiliser les scripts du dossier `scripts/` pour setup, start, reset-db, etc.
-- Respecter le workflow Git (feature branch, PR, review, merge)
-- Documenter toute nouvelle API dans Swagger
-- Vérifier la CI avant de merger
-- Consulter les dashboards Prometheus/Grafana pour surveiller la santé de l'app
-- Consulter Kibana pour diagnostiquer les erreurs
+- **Backend Health Check**: `https://<backend-url>/actuator/health`
+- **Frontend Health Check**: `https://<frontend-url>/health`
 
-### 6. Dépannage rapide
-- **Un service ne démarre pas ?**
-  ```sh
-  docker-compose logs <service>
-  ```
-- **Problème de build/test ?**
-  - Voir l'onglet Actions sur GitHub, ou le mail de notification d'échec
-- **Problème de base de données ?**
-  - Utiliser les scripts `reset-db.*` pour réinitialiser la base
+## 🔒 Sécurité
 
----
+- Les variables sensibles sont gérées via les variables d'environnement Render
+- Configuration CORS appropriée
+- Headers de sécurité configurés dans Nginx
 
-## 📂 Structure du projet
-- `backend/` : API Spring Boot (Java 21)
-- `frontend/` : Interface React
-- `docker/` : Orchestration Docker Compose, monitoring, logs
-- `docs/` : Documentation technique et guides
-- `scripts/` : Automatisation (setup, start, etc.)
+## 👤 Utilisateur par Défaut
 
----
+Après le déploiement, un utilisateur administrateur est automatiquement créé :
 
-## 🛠️ Prérequis
-- Docker Desktop (recommandé)
-- (Pour dev local : Java 21, Node.js 16+)
+- **Username**: `admin`
+- **Password**: `admin`
+- **Rôle**: Administrateur
 
----
+⚠️ **IMPORTANT**: Changez ce mot de passe après votre première connexion !
 
-## 🔒 Authentification
-- Gestion JWT, endpoints `/login`, `/api/**` protégés
-- Voir la doc Swagger pour les détails
+### Vérification de l'utilisateur admin
 
----
+Après le déploiement, vous pouvez vérifier que l'utilisateur admin fonctionne :
 
-## 📚 Documentation complémentaire
-- [docs/installation.md](docs/installation.md) : Installation et configuration locale
-- [docs/architecture.md](docs/architecture.md) : Architecture technique
-- [docs/scripts.md](docs/scripts.md) : Utilisation des scripts
-- [docs/git-workflow.md](docs/git-workflow.md) : Bonnes pratiques Git/CI
-- [devops.md](devops.md) : Bonnes pratiques DevOps, checklist, sécurité
+```bash
+# Linux/Mac
+./scripts/verify-admin-user.sh https://comptel-backend.onrender.com
 
----
+# Windows PowerShell
+.\scripts\verify-admin-user.ps1 https://comptel-backend.onrender.com
+```
 
-## 🏷️ Changelog automatique
-- Généré à chaque release (voir l'onglet Releases sur GitHub)
+## 📝 Notes Importantes
 
----
+1. **Base de données**: Assurez-vous que votre base PostgreSQL est créée avant le déploiement du backend
+2. **URLs**: Mettez à jour `REACT_APP_API_URL` avec l'URL réelle de votre backend après déploiement
+3. **SSL**: Render fournit automatiquement des certificats SSL
+4. **Scaling**: Les services peuvent être mis à l'échelle selon vos besoins
+5. **Sécurité**: L'utilisateur admin/admin est créé automatiquement - changez le mot de passe !
 
-## 👥 Équipe & contact
-- Pour toute question, ouvrez une issue sur GitHub ou contactez l'équipe DevOps
+## 🆘 Support
 
----
-
-## ✨ Pour aller plus loin
-- Ajoutez vos dashboards Grafana personnalisés
-- Connectez Prometheus à d'autres services
-- Intégrez la stack ELK à vos applications pour centraliser tous les logs
-
----
-
-> Ce projet suit les meilleures pratiques DevOps et est prêt pour la production, le développement collaboratif et l'observabilité avancée.
+En cas de problème:
+1. Vérifiez les logs dans le dashboard Render
+2. Assurez-vous que tous les services sont démarrés
+3. Vérifiez la connectivité entre les services
