@@ -144,14 +144,14 @@ export const invoiceApi = {
   getByDateRange: (start, end) => {
     validateDate(new Date(start));
     validateDate(new Date(end));
-    return api.get(`/invoices/by-date-range?start=${start}&end=${end}`);
+    return api.get('/invoices/by-date-range', { params: { start, end } });
   },
   getByStatus: (status) => api.get(`/invoices/by-status/${status}`),
   getByCustomer: (customerId) => api.get(`/invoices/by-customer/${customerId}`),
   getTotalsByDateRange: (start, end) => {
     validateDate(new Date(start));
     validateDate(new Date(end));
-    return api.get(`/invoices/totals/by-date-range?start=${start}&end=${end}`);
+    return api.get('/invoices/totals/by-date-range', { params: { start, end } });
   },
   getTotalsByStatus: (status) => api.get(`/invoices/totals/by-status/${status}`),
   getTotalsByCustomer: (customer) => api.get(`/invoices/totals/by-customer/${customer}`),
@@ -180,7 +180,7 @@ export const inputApi = {
   getTotalsByDateRange: (start, end) => {
     validateDate(new Date(start));
     validateDate(new Date(end));
-    return api.get(`/inputs/totals/by-date-range?start=${start}&end=${end}`);
+    return api.get('/inputs/totals/by-date-range', { params: { start, end } });
   },
   getTotalsByMode: (mode) => api.get(`/inputs/totals/by-mode/${mode}`),
   getTotalByDateRange: (start, end) => {

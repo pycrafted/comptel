@@ -175,36 +175,46 @@ public class InvoiceController {
     public ResponseEntity<List<Map<String, Object>>> getInvoicesByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        List<Invoice> invoices = invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end);
-        List<Map<String, Object>> response = invoices.stream()
-                .map(this::mapInvoiceToResponse)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        try {
+            List<Invoice> invoices = invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end);
+            List<Map<String, Object>> response = invoices.stream()
+                    .map(this::mapInvoiceToResponse)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(List.of(Map.of("error", "Erreur lors de la récupération des factures: " + e.getMessage())));
+        }
     }
 
     @GetMapping("/totals/by-date-range")
     public ResponseEntity<Map<String, Object>> getTotalsByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        List<Invoice> invoices = invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end);
-        
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        BigDecimal totalPaid = BigDecimal.ZERO;
-        BigDecimal totalBalance = BigDecimal.ZERO;
-        
-        for (Invoice invoice : invoices) {
-            totalAmount = totalAmount.add(invoice.getTotal());
-            totalPaid = totalPaid.add(invoice.getAmountPaid());
-            totalBalance = totalBalance.add(invoice.getBalance());
+        try {
+            List<Invoice> invoices = invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end);
+            
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            BigDecimal totalPaid = BigDecimal.ZERO;
+            BigDecimal totalBalance = BigDecimal.ZERO;
+            
+            for (Invoice invoice : invoices) {
+                totalAmount = totalAmount.add(invoice.getTotal());
+                totalPaid = totalPaid.add(invoice.getAmountPaid());
+                totalBalance = totalBalance.add(invoice.getBalance());
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("totalAmount", totalAmount.toString());
+            response.put("totalPaid", totalPaid.toString());
+            response.put("totalBalance", totalBalance.toString());
+            response.put("invoiceCount", invoices.size());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Erreur lors du calcul des totaux: " + e.getMessage()));
         }
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("totalAmount", totalAmount.toString());
-        response.put("totalPaid", totalPaid.toString());
-        response.put("totalBalance", totalBalance.toString());
-        response.put("invoiceCount", invoices.size());
-        
-        return ResponseEntity.ok(response);
     }
 
     // Méthodes utilitaires privées
