@@ -1,404 +1,363 @@
-// src/pages/Receipt.jsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
-  Grid,
   Paper,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Grid,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Alert,
   IconButton,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  Box,
-  MenuItem,
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Close as CloseIcon,
-} from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { inputApi } from '../services/api';
 
-// Styles personnalisés
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  '&.header-green': {
-    backgroundColor: theme.palette.primary.main,
-    color: 'white',
-    borderColor: theme.palette.primary.main,
-  },
-  '&.header-red': {
-    backgroundColor: theme.palette.secondary.main,
-    color: 'white',
-    borderColor: theme.palette.secondary.main,
-  },
-  '&.cash': {
-    color: theme.palette.primary.main,
-  },
-  '&.wave': {
-    color: '#00c5f6',
-  },
-  '&.om': {
-    color: '#f77601',
-  },
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    '& fieldset': {
-      borderRadius: theme.shape.borderRadius,
-    },
-  },
-}));
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(amount);
+};
 
 const Receipt = () => {
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
-  const [openInputModal, setOpenInputModal] = useState(false);
-  const [openExitModal, setOpenExitModal] = useState(false);
-  
-  const [newInput, setNewInput] = useState({
-    titre: '',
+  const [inputs, setInputs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedInput, setSelectedInput] = useState(null);
+  const [formData, setFormData] = useState({
     montant: '',
-    type: 'cash',
+    mode: '',
+    date: new Date().toISOString(),
+    description: ''
   });
-  
-  const [newExit, setNewExit] = useState({
-    titre: '',
-    montant: '',
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().setDate(1)).toISOString(),
+    end: new Date().toISOString()
   });
-
-  const [data] = useState({
-    previousDayTotal: 50000,
-    inputesCash: [{ titres: 'Entrée 1', montants: 10000 }],
-    inputesWave: [{ titres: 'Wave 1', montants: 5000 }],
-    inputesOrange: [{ titres: 'OM 1', montants: 7000 }],
-    exits: [{ titre: 'Sortie 1', montant: 2000 }],
-    payments: [
-      { invoice: { reference: 'INV-001' }, mode_paiement: 'cash', amount: 15000 },
-      { invoice: { reference: 'INV-002' }, mode_paiement: 'wave', amount: 8000 },
-    ],
-    totalEntreesCash: 25000,
-    totalEntreesWave: 13000,
-    totalEntreesOm: 7000,
-    totalSorties: 2000,
-    totalReport: 43000
+  const [totals, setTotals] = useState({
+    total: 0,
+    byMode: {}
   });
 
-  const handleDateChange = useCallback((event) => {
-    setDateFilter(event.target.value);
-  }, []);
+  useEffect(() => {
+    fetchInputs();
+    fetchTotals();
+  }, [dateRange]);
 
-  const handleInputSubmit = useCallback((e) => {
+  const fetchInputs = async () => {
+    try {
+      setLoading(true);
+      const response = await inputApi.getByDateRange(dateRange.start, dateRange.end);
+      setInputs(response.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors du chargement des entrées');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTotals = async () => {
+    try {
+      const [totalResponse, byModeResponse] = await Promise.all([
+        inputApi.getTotalsByDateRange(dateRange.start, dateRange.end),
+        inputApi.getTotalsByMode('ALL')
+      ]);
+      setTotals({
+        total: totalResponse.data.total,
+        byMode: byModeResponse.data
+      });
+    } catch (err) {
+      console.error('Erreur lors du chargement des totaux:', err);
+    }
+  };
+
+  const handleDateRangeChange = (field, value) => {
+    setDateRange(prev => ({ ...prev, [field]: value }));
+    if (validateDateRange()) {
+      fetchInputs();
+    }
+  };
+
+  const validateDateRange = () => {
+    const start = new Date(dateRange.start);
+    const end = new Date(dateRange.end);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      setError('Les dates sont invalides');
+      return false;
+    }
+    
+    if (start > end) {
+      setError('La date de début doit être antérieure à la date de fin');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleFormChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Nouvelle entrée:', newInput);
-    setOpenInputModal(false);
-    setNewInput({ titre: '', montant: '', type: 'cash' });
-  }, [newInput]);
+    try {
+      setLoading(true);
+      if (selectedInput) {
+        await inputApi.update(selectedInput.id, formData);
+      } else {
+        await inputApi.create(formData);
+      }
+      setOpenDialog(false);
+      setSelectedInput(null);
+      setFormData({
+        montant: '',
+        mode: '',
+        date: new Date().toISOString(),
+        description: ''
+      });
+      fetchInputs();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de l\'enregistrement de l\'entrée');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleExitSubmit = useCallback((e) => {
-    e.preventDefault();
-    console.log('Nouvelle sortie:', newExit);
-    setOpenExitModal(false);
-    setNewExit({ titre: '', montant: '' });
-  }, [newExit]);
+  const handleEdit = (input) => {
+    setSelectedInput(input);
+    setFormData({
+      montant: input.montant,
+      mode: input.mode,
+      date: input.date,
+      description: input.description
+    });
+    setOpenDialog(true);
+  };
 
-  const formatCurrency = useCallback((amount) => {
-    return `${amount.toLocaleString('fr-FR')} FCFA`;
-  }, []);
+  const handleDelete = (input) => {
+    setSelectedInput(input);
+    setOpenDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      setLoading(true);
+      await inputApi.delete(selectedInput.id);
+      setInputs(inputs.filter(input => input.id !== selectedInput.id));
+      setOpenDialog(false);
+      setSelectedInput(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur lors de la suppression de l\'entrée');
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateTotal = () => {
+    return inputs.reduce((sum, input) => sum + input.montant, 0);
+  };
+
+  if (loading) {
+    return (
+      <Container>
+        <Typography>Chargement...</Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" justifyContent="center" mb={3}>
-        <StyledTextField
-          type="date"
-          value={dateFilter}
-          onChange={handleDateChange}
-          sx={{ width: 220 }}
-          InputLabelProps={{ shrink: true }}
-        />
-      </Box>
-
       <Grid container spacing={3}>
-        {/* Table des entrées */}
-        <Grid item xs={12} md={6}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 2, 
-              display: 'flex', 
-              flexDirection: 'column',
-              height: '100%'
-            }}
-          >
-            <Box display="flex" justifyContent="flex-end" mb={1}>
-              <IconButton 
-                onClick={() => setOpenInputModal(true)} 
-                size="small"
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" component="h2">
+                Entrées
+              </Typography>
+              <Button
+                variant="contained"
                 color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setSelectedInput(null);
+                  setFormData({
+                    montant: '',
+                    mode: '',
+                    date: new Date().toISOString(),
+                    description: ''
+                  });
+                  setOpenDialog(true);
+                }}
               >
-                <EditIcon />
-              </IconButton>
+                Nouvelle Entrée
+              </Button>
             </Box>
-            
-            <TableContainer>
-              <Table size="small">
+
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Date de début"
+                  type="datetime-local"
+                  value={dateRange.start}
+                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!error && error.includes('date de début')}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Date de fin"
+                  type="datetime-local"
+                  value={dateRange.end}
+                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!error && error.includes('date de fin')}
+                />
+              </Grid>
+            </Grid>
+
+            {error && (
+              <Typography color="error" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+            )}
+
+            <TableContainer component={Paper}>
+              <Table>
                 <TableHead>
                   <TableRow>
-                    <StyledTableCell className="header-green" colSpan={4} align="center">
-                      ENTREES
-                    </StyledTableCell>
-                  </TableRow>
-                  <TableRow>
-                    <StyledTableCell>REFERENCE</StyledTableCell>
-                    <StyledTableCell className="cash">ESPECE</StyledTableCell>
-                    <StyledTableCell className="wave">WAVE</StyledTableCell>
-                    <StyledTableCell className="om">OM</StyledTableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Montant</TableCell>
+                    <TableCell>Mode</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
+                  {inputs.map((input) => (
+                    <TableRow key={input.id}>
+                      <TableCell>{new Date(input.createdAts).toLocaleString('fr-FR')}</TableCell>
+                      <TableCell>{input.titres}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(input.montants))}</TableCell>
+                      <TableCell>{input.modePaiement}</TableCell>
+                      <TableCell>
+                        <IconButton onClick={() => handleEdit(input)} color="primary">
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(input)} color="error">
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                   <TableRow>
-                    <TableCell><strong>RAN</strong></TableCell>
-                    <TableCell>{formatCurrency(data.previousDayTotal)}</TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
+                    <TableCell colSpan={2}><strong>Total</strong></TableCell>
+                    <TableCell><strong>{formatCurrency(parseFloat(totals.total))}</strong></TableCell>
+                    <TableCell colSpan={2}></TableCell>
                   </TableRow>
-                  {data.inputesCash.map((input, index) => (
-                    <TableRow key={`cash-${index}`}>
-                      <TableCell><strong>{input.titres}</strong></TableCell>
-                      <TableCell className="cash">{formatCurrency(input.montants)}</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  ))}
-                  {data.inputesWave.map((input, index) => (
-                    <TableRow key={`wave-${index}`}>
-                      <TableCell><strong>{input.titres}</strong></TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="wave">{formatCurrency(input.montants)}</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  ))}
-                  {data.inputesOrange.map((input, index) => (
-                    <TableRow key={`om-${index}`}>
-                      <TableCell><strong>{input.titres}</strong></TableCell>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="om">{formatCurrency(input.montants)}</TableCell>
-                    </TableRow>
-                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
-          </Paper>
-        </Grid>
 
-        {/* Table des sorties */}
-        <Grid item xs={12} md={6}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 2, 
-              display: 'flex', 
-              flexDirection: 'column',
-              height: '100%'
-            }}
-          >
-            <Box display="flex" justifyContent="flex-end" mb={1}>
-              <IconButton 
-                onClick={() => setOpenExitModal(true)} 
-                size="small"
-                color="secondary"
-              >
-                <EditIcon />
-              </IconButton>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6">Total par mode de paiement</Typography>
+              <Grid container spacing={2}>
+                {Object.entries(totals.byMode || {}).map(([mode, amount]) => (
+                  <Grid item xs={12} sm={4} key={mode}>
+                    <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'white' }}>
+                      <Typography variant="subtitle1">{mode.toUpperCase()}</Typography>
+                      <Typography variant="h6">{formatCurrency(parseFloat(amount))}</Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
             </Box>
-            
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <StyledTableCell className="header-red" colSpan={2} align="center">
-                      SORTIES
-                    </StyledTableCell>
-                  </TableRow>
-                  <TableRow>
-                    <StyledTableCell>TITRE</StyledTableCell>
-                    <StyledTableCell>MONTANT</StyledTableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.exits.map((exit, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{exit.titre}</TableCell>
-                      <TableCell>{formatCurrency(exit.montant)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-
-        {/* Totaux */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Table size="small">
-              <TableBody>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: '#343A40', color: 'white', fontWeight: 'bold' }}>
-                    TOT. ENTREES
-                  </TableCell>
-                  <TableCell>{formatCurrency(data.totalEntreesCash)}</TableCell>
-                  <TableCell>{formatCurrency(data.totalEntreesWave)}</TableCell>
-                  <TableCell>{formatCurrency(data.totalEntreesOm)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Table size="small">
-              <TableBody>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: '#343A40', color: 'white', fontWeight: 'bold' }}>
-                    TOT. SORTIES
-                  </TableCell>
-                  <TableCell>{formatCurrency(data.totalSorties)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Paper>
-        </Grid>
-
-        {/* Report à nouveau */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Table size="small">
-              <TableBody>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: '#E7E6E6', textAlign: 'center', fontWeight: 'bold' }}>
-                    REPORT A NOUVEAU
-                  </TableCell>
-                  <TableCell align="center">{formatCurrency(data.totalReport)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
           </Paper>
         </Grid>
       </Grid>
 
-      {/* Modal pour nouvelle entrée */}
-      <Dialog 
-        open={openInputModal} 
-        onClose={() => setOpenInputModal(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
-          NOUVELLE ENTREE
-          <IconButton
-            onClick={() => setOpenInputModal(false)}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            <CloseIcon />
-          </IconButton>
+          {selectedInput ? 'Modifier l\'entrée' : 'Nouvelle entrée'}
         </DialogTitle>
-        <form onSubmit={handleInputSubmit}>
-          <DialogContent>
-            <StyledTextField
-              margin="dense"
-              label="Titre"
-              fullWidth
-              value={newInput.titre}
-              onChange={(e) => setNewInput({ ...newInput, titre: e.target.value })}
-              required
-            />
-            <StyledTextField
-              margin="dense"
-              label="Montant"
-              type="number"
-              fullWidth
-              value={newInput.montant}
-              onChange={(e) => setNewInput({ ...newInput, montant: e.target.value })}
-              required
-            />
-            <StyledTextField
-              margin="dense"
-              label="Type"
-              select
-              fullWidth
-              value={newInput.type}
-              onChange={(e) => setNewInput({ ...newInput, type: e.target.value })}
-              required
-            >
-              <MenuItem value="cash">Espèce</MenuItem>
-              <MenuItem value="wave">Wave</MenuItem>
-              <MenuItem value="om">Orange Money</MenuItem>
-            </StyledTextField>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenInputModal(false)}>Annuler</Button>
-            <Button type="submit" variant="contained" color="primary">
-              Enregistrer
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      {/* Modal pour nouvelle sortie */}
-      <Dialog 
-        open={openExitModal} 
-        onClose={() => setOpenExitModal(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          NOUVELLE SORTIE
-          <IconButton
-            onClick={() => setOpenExitModal(false)}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <form onSubmit={handleExitSubmit}>
-          <DialogContent>
-            <StyledTextField
-              margin="dense"
-              label="Titre"
-              fullWidth
-              value={newExit.titre}
-              onChange={(e) => setNewExit({ ...newExit, titre: e.target.value })}
-              required
-            />
-            <StyledTextField
-              margin="dense"
-              label="Montant"
-              type="number"
-              fullWidth
-              value={newExit.montant}
-              onChange={(e) => setNewExit({ ...newExit, montant: e.target.value })}
-              required
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenExitModal(false)}>Annuler</Button>
-            <Button type="submit" variant="contained" color="secondary">
-              Enregistrer
-            </Button>
-          </DialogActions>
-        </form>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Montant"
+                type="number"
+                value={formData.montant}
+                onChange={(e) => handleFormChange('montant', parseFloat(e.target.value))}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label="Mode de paiement"
+                value={formData.mode}
+                onChange={(e) => handleFormChange('mode', e.target.value)}
+                required
+              >
+                <MenuItem value="ESPECES">Espèces</MenuItem>
+                <MenuItem value="VIREMENT">Virement</MenuItem>
+                <MenuItem value="CHEQUE">Chèque</MenuItem>
+                <MenuItem value="CARTE">Carte</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Date"
+                type="datetime-local"
+                value={formData.date}
+                onChange={(e) => handleFormChange('date', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={formData.description}
+                onChange={(e) => handleFormChange('description', e.target.value)}
+                required
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Annuler</Button>
+          <Button onClick={handleSubmit} color="primary">
+            {selectedInput ? 'Modifier' : 'Ajouter'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );
 };
 
-export default Receipt;
+export default Receipt; 

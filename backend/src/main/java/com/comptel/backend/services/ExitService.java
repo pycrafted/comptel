@@ -6,6 +6,8 @@ import com.comptel.backend.entity.User;
 import com.comptel.backend.repository.ExitRepository;
 import com.comptel.backend.repository.DepenseRepository;
 import com.comptel.backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,7 @@ import java.util.Optional;
 
 @Service
 public class ExitService {
+    private static final Logger logger = LoggerFactory.getLogger(ExitService.class);
     private final ExitRepository exitRepository;
     private final DepenseRepository depenseRepository;
     private final UserRepository userRepository;
@@ -28,19 +31,30 @@ public class ExitService {
 
     @Transactional
     public Exit createExit(String titre, BigDecimal montant, Exit.TypeDepense typeDepense, Long userId) {
+        logger.info("Début de la création d'une sortie - titre={}, montant={}, typeDepense={}, userId={}", 
+            titre, montant, typeDepense, userId);
+
         Exit exit = new Exit();
         exit.setTitre(titre);
         exit.setMontant(montant);
         exit.setTypeDepense(typeDepense);
         exit.setCreatedAt(LocalDateTime.now());
+        logger.debug("Sortie créée avec les données de base");
 
         Optional<User> user = userRepository.findById(userId);
-        user.ifPresent(exit::setSaveBy);
+        if (user.isPresent()) {
+            logger.debug("Utilisateur trouvé: {}", user.get().getUsername());
+            exit.setSaveBy(user.get());
+        } else {
+            logger.warn("Utilisateur non trouvé avec l'ID: {}", userId);
+        }
 
         exit = exitRepository.save(exit);
+        logger.info("Sortie enregistrée avec l'ID: {}", exit.getId());
 
         // Création automatique d'une dépense associée si un type est spécifié
         if (typeDepense != null) {
+            logger.debug("Création de la dépense associée");
             Depense depense = new Depense();
             depense.setType(typeDepense);
             depense.setIntitule(titre);
@@ -48,6 +62,7 @@ public class ExitService {
             depense.setQuantite(1);
             depense.setDateDepense(LocalDateTime.now());
             depenseRepository.save(depense);
+            logger.info("Dépense associée créée avec succès");
         }
 
         return exit;

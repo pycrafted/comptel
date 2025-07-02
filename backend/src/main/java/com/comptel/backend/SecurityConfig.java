@@ -1,112 +1,19 @@
-//package com.example.facture_app;
-//
-//import com.example.facture_app.services.UseImpl;
-//import org.springframework.context.annotation.Bean;
-//import org.springframework.context.annotation.Configuration;
-//import org.springframework.http.HttpMethod;
-//import org.springframework.security.authentication.AuthenticationManager;
-//import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-//import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-//import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-//import org.springframework.security.config.http.SessionCreationPolicy;
-//import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-//import org.springframework.security.crypto.password.PasswordEncoder;
-//import org.springframework.security.web.SecurityFilterChain;
-//import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-//
-//@Configuration
-//@EnableWebSecurity
-//public class SecurityConfig {
-//
-//    private final UseImpl userDetailsService;
-//
-//    private final AuthentificationFilter authenticationFilter;
-//    public SecurityConfig(UseImpl userDetailsService, AuthentificationFilter authenticationFilter) {
-//        this.userDetailsService = userDetailsService;
-//        this.authenticationFilter = authenticationFilter;
-//    }
-//
-////    @Bean
-////    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-////        http.csrf(csrf -> csrf.disable())
-////                .sessionManagement(sessionManagement -> sessionManagement
-////                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-////                .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
-////                        .requestMatchers(HttpMethod.POST, "/login").permitAll()
-////                        .anyRequest().authenticated())
-////                .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
-////        return http.build();
-////    }
-//    @Bean
-//    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-//        return authConfig.getAuthenticationManager();
-//    }
-//    @Bean
-//    public PasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder();
-//    }
-//
-//}
-////public class SecurityConfig {
-////
-////    @Bean
-////    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-////        http
-////                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Ajout de CORS
-////                .authorizeHttpRequests(auth -> auth
-////                        .requestMatchers("/api/invoices/**").authenticated()
-////                        .anyRequest().permitAll()
-////                )
-////                .httpBasic(Customizer.withDefaults())
-////                .logout(logout -> logout
-////                        .logoutUrl("/api/logout")
-////                        .logoutSuccessUrl("/api/login?logout")
-////                        .permitAll()
-////                )
-////                .csrf(csrf -> csrf.disable());
-////
-////        return http.build();
-////    }
-////
-////    @Bean
-////    public CorsConfigurationSource corsConfigurationSource() {
-////        CorsConfiguration configuration = new CorsConfiguration();
-////        configuration.addAllowedOrigin("http://localhost:3000"); // Autorise React
-////        configuration.addAllowedMethod("*"); // Autorise GET, POST, DELETE, etc.
-////        configuration.addAllowedHeader("*"); // Autorise tous les headers (dont Authorization)
-////        configuration.setAllowCredentials(true); // Autorise les credentials (Basic Auth)
-////        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-////        source.registerCorsConfiguration("/**", configuration);
-////        return source;
-////    }
-////
-////    @Bean
-////    public UserDetailsService userDetailsService() {
-////        UserDetails user = User.withUsername("admin")
-////                .password("{noop}password")
-////                .roles("USER")
-////                .build();
-////        return new InMemoryUserDetailsManager(user);
-////    }
-////}
-
 package com.comptel.backend;
 
 import com.comptel.backend.services.UseImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * Cette classe configure Spring Security pour l'authentification et l'autorisation.
@@ -130,20 +37,6 @@ public class SecurityConfig {
         this.authenticationFilter = authenticationFilter;
     }
 
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http
-//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-//                .csrf(csrf -> csrf.disable())
-//                .sessionManagement(sessionManagement -> sessionManagement
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-//                .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
-//                        .anyRequest().permitAll()
-//                ).addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
-
     /**
      * Configure les règles de sécurité pour l'application.
      * @param http Objet HttpSecurity pour définir les configurations de sécurité.
@@ -160,21 +53,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Ajout de CORS
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health").permitAll() // Autorise l'accès public à l'endpoint health
-                        .requestMatchers("/api/services/**").permitAll() // Autorise tout le monde sur /api/services
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
-                )
-                .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .httpBasic(Customizer.withDefaults())
-                .logout(logout -> logout
-                        .logoutUrl("/api/logout")
-                        .logoutSuccessUrl("/api/login?logout")
-                        .permitAll()
-                )
-                .csrf(csrf -> csrf.disable());
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/login").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/api/services/**").permitAll()
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
+            )
+            .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(401);
+                    response.getWriter().write("{\"error\": \"Non authentifié\", \"message\": \"" + authException.getMessage() + "\"}");
+                })
+            );
 
         return http.build();
     }
@@ -220,9 +115,15 @@ public class SecurityConfig {
         configuration.setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
         configuration.addExposedHeader("Authorization");
+        configuration.addExposedHeader("Content-Type");
+        configuration.addExposedHeader("Accept");
+        configuration.addExposedHeader("Origin");
+        configuration.addExposedHeader("Access-Control-Request-Method");
+        configuration.addExposedHeader("Access-Control-Request-Headers");
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }

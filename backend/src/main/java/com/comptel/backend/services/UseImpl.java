@@ -1,6 +1,8 @@
 package com.comptel.backend.services;
 
 import com.comptel.backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,6 +17,7 @@ import java.util.Optional;
 @Service
 public class UseImpl implements UserDetailsService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UseImpl.class);
     private final UserRepository userRepository;
 
     /**
@@ -33,13 +36,28 @@ public class UseImpl implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        logger.info("Tentative de chargement de l'utilisateur: {}", username);
+        
         Optional<com.comptel.backend.entity.User> user = userRepository.findByUsername(username);
         if (user.isPresent()) {
             com.comptel.backend.entity.User currentUser = user.get();
-            return User.withUsername(username).password(currentUser.getPassword()).roles(currentUser.isRole()? "admin" : "user")
+            logger.info("Utilisateur trouvé: {}, rôle: {}", 
+                currentUser.getUsername(), 
+                currentUser.isRole() ? "ADMIN" : "USER");
+            
+            return User.withUsername(username)
+                    .password(currentUser.getPassword())
+                    .roles(currentUser.isRole() ? "ADMIN" : "USER")
                     .build();
         } else {
-            throw new UsernameNotFoundException("Utilisateur non trouvé.");
+            logger.error("Utilisateur non trouvé: {}", username);
+            throw new UsernameNotFoundException("Utilisateur non trouvé: " + username);
         }
+    }
+
+    public Long getUserIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+            .map(com.comptel.backend.entity.User::getId)
+            .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé: " + username));
     }
 }

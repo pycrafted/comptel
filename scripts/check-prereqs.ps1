@@ -20,7 +20,7 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "Node.js n'est pas installé ou non trouvé dans le PATH." -ForegroundColor Red
     Write-Host "Téléchargez Node.js 16+ ici : https://nodejs.org/" -ForegroundColor Yellow
     exit 1
-} elseif (-not (node -v | Select-String "v1[6-9]\\.|v[2-9][0-9]\\.")) {
+} elseif (-not (node -v | Select-String "v(1[6-9]|[2-9][0-9])\.")) {
     Write-Host "Node.js trouvé, mais la version est trop ancienne. Installez Node.js 16 ou supérieur." -ForegroundColor Red
     exit 1
 } else {

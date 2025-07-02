@@ -1,461 +1,458 @@
-import React, { useEffect, useState } from 'react';
-import { getAddInvoiceData, createInvoice, updateInvoicePayment } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Box,
+  Container,
+  Paper,
   Typography,
   TextField,
-  Checkbox,
-  FormControlLabel,
   Button,
-  Select,
+  Grid,
   MenuItem,
-  InputLabel,
-  FormControl,
-  Fade,
-  Paper,
-  Snackbar,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
+  FormControlLabel,
+  Switch,
+  Box,
+  CircularProgress,
+  IconButton,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { invoiceApi } from '../services/api';
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { fetchServices } from '../services/defaultServices';
+import axios from 'axios';
 
 const AddInvoice = () => {
+  const navigate = useNavigate();
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState([]);
   const [formData, setFormData] = useState({
     customer: '',
     telephone: '',
-    delivered: false,
-    invoiceDateTime: new Date().toISOString().slice(0, 16),
-    serviceIds: [],
-    quantites: [],
-    prixs: [],
-    modePaiement: '',
+    invoiceDateTime: new Date().toISOString().split('T')[0],
+    serviceIds: [''],
+    quantites: ['1'],
+    prixs: [''],
     amountPaid: '',
-    paymentDate: '',
-  });
-  
-  // État pour le panneau de paiement
-  const [paymentData, setPaymentData] = useState({
-    ticketNumber: '8000',
-    modePaiement: '',
-    montantPaiement: '0',
-    datePaiement: '',
+    total: 0,
+    notes: '',
+    delivered: false,
+    mode_paiement: 'CASH',
+    paymentDate: null
   });
 
-  const [services, setServices] = useState([]);
-  const [nextReference, setNextReference] = useState(null);
-  const [settings, setSettings] = useState({});
-  const [lastInvoiceId, setLastInvoiceId] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [openErrorSnackbar, setOpenErrorSnackbar] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    fetchAddInvoiceData();
+    const loadServices = async () => {
+      const servicesData = await fetchServices();
+      setServices(servicesData);
+    };
+    loadServices();
   }, []);
 
-  const fetchAddInvoiceData = async () => {
-    try {
-      const response = await getAddInvoiceData();
-      setServices(response.data.services);
-      setNextReference(response.data.nextReference);
-      setSettings({
-        useDeliveryConfirmation: response.data.useDeliveryConfirmation,
-        usePartialPayment: response.data.usePartialPayment,
-        useAntidate: response.data.useAntidate,
-      });
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('Début du chargement des données...');
+        const response = await invoiceApi.getAddData();
+        console.log('Réponse reçue:', response);
+        
+        if (!response || !response.data) {
+          console.error('La réponse est vide ou invalide');
+          setError('Erreur: Aucune donnée reçue du serveur');
+          return;
+        }
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
-  };
+        const { services: servicesData, nextReference } = response.data;
+        
+        if (!servicesData) {
+          console.error('La liste des services est manquante dans la réponse');
+          setError('Erreur: Liste des services non disponible');
+          return;
+        }
 
-  const handlePaymentChange = (e) => {
-    const { name, value } = e.target;
-    setPaymentData({
-      ...paymentData,
-      [name]: value,
-    });
-  };
+        console.log('Services chargés:', servicesData);
+        setServices(servicesData);
+        console.log('État des services mis à jour');
+        
+        if (nextReference) {
+          setFormData(prev => ({
+            ...prev,
+            reference: nextReference
+          }));
+        }
+      } catch (err) {
+        console.error('Erreur détaillée lors du chargement:', err);
+        console.error('Message d\'erreur:', err.message);
+        console.error('Réponse du serveur:', err.response?.data);
+        setError('Erreur lors du chargement des données: ' + (err.response?.data?.message || err.message));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleServiceChange = (index, field, value) => {
-    const updatedArray = [...formData[field]];
-    updatedArray[index] = field === 'quantites' ? parseInt(value) || 1 : value;
-    setFormData({ ...formData, [field]: updatedArray });
+    console.log('Modification du service:', { index, field, value });
+    console.log('État actuel:', formData);
+
+    const newFormData = { ...formData };
+    
+    if (field === 'serviceId') {
+      newFormData.serviceIds[index] = value;
+      const selectedService = services.find(s => s.id === value);
+      if (selectedService) {
+        newFormData.prixs[index] = selectedService.prix;
+      }
+    } else if (field === 'quantite') {
+      newFormData.quantites[index] = value;
+    } else if (field === 'prix') {
+      newFormData.prixs[index] = value;
+    }
+
+    console.log('Nouvel état après modification:', newFormData);
+    setFormData(newFormData);
   };
 
-  const addServiceRow = () => {
+  const handleQuantityChange = (index, value) => {
+    const newItems = [...formData.quantites];
+    newItems[index] = parseInt(value) || 0;
+    setFormData({ ...formData, quantites: newItems });
+  };
+
+  const handlePriceChange = (index, value) => {
+    const newItems = [...formData.prixs];
+    newItems[index] = parseFloat(value) || 0;
+    setFormData({ ...formData, prixs: newItems });
+  };
+
+  const handleAddItem = () => {
     setFormData({
       ...formData,
-      serviceIds: [...formData.serviceIds, ''],
-      quantites: [...formData.quantites, 1],
-      prixs: [...formData.prixs, ''],
+      items: [...formData.items, { serviceId: '', quantity: 1, price: 0 }]
     });
+  };
+
+  const handleRemoveItem = (index) => {
+    const newItems = formData.items.filter((_, i) => i !== index);
+    setFormData({ ...formData, items: newItems });
+  };
+
+  const calculateTotal = () => {
+    console.log('Calcul du total - Données actuelles:', {
+      quantites: formData.quantites,
+      prixs: formData.prixs
+    });
+
+    if (!Array.isArray(formData.quantites) || !Array.isArray(formData.prixs)) {
+      console.error('Erreur: quantites ou prixs ne sont pas des tableaux', {
+        quantites: formData.quantites,
+        prixs: formData.prixs
+      });
+      return 0;
+    }
+
+    const total = formData.quantites.reduce((sum, qty, index) => {
+      const prix = formData.prixs[index] || 0;
+      const qtyNum = Number(qty) || 0;
+      const prixNum = Number(prix) || 0;
+      console.log(`Calcul pour l'index ${index}:`, {
+        quantite: qtyNum,
+        prix: prixNum,
+        sousTotal: qtyNum * prixNum
+      });
+      return sum + (qtyNum * prixNum);
+    }, 0);
+
+    console.log('Total calculé:', total);
+    return total;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Préparer le payload pour le backend
-    const payload = {
-      customer: formData.customer,
-      telephone: formData.telephone,
-      delivered: formData.delivered,
-      invoiceDateTime: formData.invoiceDateTime,
-      serviceIds: formData.serviceIds.map(id => Number(id)),
-      quantites: formData.quantites.map(q => Number(q)),
-      prixs: formData.prixs.map(p => p.toString()), // S'assurer que c'est bien un tableau de chaînes
-      mode_paiement: formData.modePaiement, // correspondance backend
-      amountPaye: formData.amountPaid,      // correspondance backend
-      paymentDate: formData.paymentDate,
-    };
+    console.log('Début de la soumission du formulaire');
+    console.log('État actuel du formulaire:', formData);
 
-    try {
-      const response = await createInvoice(payload);
-      setLastInvoiceId(response.data.id);
-      setSuccessMessage('Facture créée avec succès ! Référence: ' + response.data.reference);
-      setOpenSnackbar(true);
-      setFormData({
-        customer: '',
-        telephone: '',
-        delivered: false,
-        invoiceDateTime: new Date().toISOString().slice(0, 16),
-        serviceIds: [],
-        quantites: [],
-        prixs: [],
-        modePaiement: '',
-        amountPaid: '',
-        paymentDate: '',
-      });
-    } catch (error) {
-      console.error('Erreur lors de la création de la facture:', error);
-      setErrorMessage('Erreur lors de la création de la facture. Vérifiez les champs et réessayez.');
-      setOpenErrorSnackbar(true);
+    // Validation des champs requis
+    const newErrors = {};
+    if (!formData.customer) newErrors.customer = 'Le nom du client est requis';
+    if (!formData.telephone) newErrors.telephone = 'Le numéro de téléphone est requis';
+    if (!formData.invoiceDateTime) newErrors.invoiceDateTime = 'La date est requise';
+
+    // Vérification des services
+    if (!formData.serviceIds.length || formData.serviceIds.some(id => !id)) {
+      newErrors.serviceIds = 'Veuillez sélectionner au moins un service';
     }
-  };
 
-  const handlePaymentSubmit = async () => {
-    if (!lastInvoiceId) {
-      alert('Veuillez d’abord créer une facture.');
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
     try {
-      const paymentPayload = {
-        amountPaye: paymentData.montantPaiement,
-        paymentDate: paymentData.datePaiement,
-        mode_paiement: paymentData.modePaiement,
-        livrer: true,
-        paiement: true
+      // Calcul du total
+      const total = calculateTotal();
+      console.log('Total calculé:', total);
+
+      // Préparation des données pour l'envoi
+      const invoiceData = {
+        customer: formData.customer,
+        telephone: formData.telephone,
+        invoiceDateTime: new Date(formData.invoiceDateTime).toISOString().slice(0, 19),
+        delivered: formData.delivered || false,
+        serviceIds: formData.serviceIds.map(id => parseInt(id)),
+        quantites: formData.quantites.map(q => parseInt(q)),
+        prixs: formData.prixs.map(p => parseFloat(p).toString()),
+        mode_paiement: formData.mode_paiement || 'CASH',
+        amountPaye: formData.amountPaid ? parseFloat(formData.amountPaid).toString() : '0',
+        paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString().slice(0, 19) : null
       };
-      await updateInvoicePayment(lastInvoiceId, paymentPayload);
-      alert('Paiement enregistré sur la facture !');
+
+      console.log('Données préparées pour l\'envoi:', invoiceData);
+
+      const response = await invoiceApi.create(invoiceData);
+      console.log('Réponse du serveur:', response.data);
+
+      if (response.data.success) {
+        // Réinitialiser le formulaire
+        setFormData({
+          customer: '',
+          telephone: '',
+          invoiceDateTime: new Date().toISOString().split('T')[0],
+          serviceIds: [''],
+          quantites: ['1'],
+          prixs: [''],
+          delivered: false,
+          mode_paiement: 'CASH',
+          amountPaid: ''
+        });
+        setErrors({});
+        alert('Facture créée avec succès !');
+      } else {
+        alert('Erreur lors de la création de la facture : ' + response.data.error);
+      }
     } catch (error) {
-      console.error('Erreur lors de l’enregistrement du paiement:', error);
-      alert('Erreur lors de l’enregistrement du paiement.');
+      console.error('Erreur détaillée:', error);
+      console.error('Message d\'erreur:', error.message);
+      console.error('Réponse du serveur:', error.response);
+      alert('Erreur lors de la création de la facture : ' + (error.response?.data?.error || error.message));
     }
   };
 
-  // Composant PaymentPanel intégré
-  const PaymentPanel = () => (
-    <Paper 
-      sx={{ 
-        p: 3, 
-        backgroundColor: '#4a5568', 
-        color: 'white',
-        borderRadius: 2,
-        minWidth: '280px',
-        maxWidth: '320px',
-        height: 'fit-content'
-      }}
-    >
-      {/* Header Ticket */}
-      <Box sx={{ textAlign: 'center', mb: 3 }}>
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            backgroundColor: '#2d3748', 
-            py: 0.5, 
-            borderRadius: '4px 4px 0 0',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            letterSpacing: '1px'
-          }}
-        >
-          TICKET N°
-        </Typography>
-        <Box 
-          sx={{ 
-            backgroundColor: '#00ff00', 
-            color: '#000', 
-            py: 1.5,
-            borderRadius: '0 0 4px 4px',
-            fontSize: '24px',
-            fontWeight: 'bold'
-          }}
-        >
-          {paymentData.ticketNumber}
-        </Box>
-      </Box>
+  // Fonction pour ajouter un nouveau service
+  const handleAddService = () => {
+    setFormData(prev => ({
+      ...prev,
+      serviceIds: [...(prev.serviceIds || []), ''],
+      quantites: [...(prev.quantites || []), 1],
+      prixs: [...(prev.prixs || []), 0]
+    }));
+  };
 
-      {/* Formulaire de paiement */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-        <Box>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            Mode de Paiement
-          </Typography>
-          <FormControl fullWidth>
-            <Select
-              name="modePaiement"
-              value={paymentData.modePaiement}
-              onChange={handlePaymentChange}
-              displayEmpty
-              sx={{
-                backgroundColor: 'white',
-                borderRadius: 1,
-                '& .MuiSelect-select': {
-                  color: '#333',
-                  py: 1.5
-                }
-              }}
-            >
-              <MenuItem value="">Sélectionnez...</MenuItem>
-              <MenuItem value="WAVE">Wave</MenuItem>
-              <MenuItem value="OM">Orange Money</MenuItem>
-              <MenuItem value="CASH">Espèces</MenuItem>
-              <MenuItem value="CARD">Carte</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-
-        <Box>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            Montant Paiement
-          </Typography>
-          <TextField
-            name="montantPaiement"
-            value={paymentData.montantPaiement}
-            onChange={handlePaymentChange}
-            type="number"
-            fullWidth
-            InputProps={{
-              sx: {
-                backgroundColor: 'white',
-                borderRadius: 1,
-                '& input': {
-                  color: '#333',
-                  py: 1.5
-                }
-              }
-            }}
-          />
-        </Box>
-
-        <Box>
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            Date de Paiement
-          </Typography>
-          <TextField
-            name="datePaiement"
-            value={paymentData.datePaiement}
-            onChange={handlePaymentChange}
-            type="datetime-local"
-            fullWidth
-            InputProps={{
-              sx: {
-                backgroundColor: 'white',
-                borderRadius: 1,
-                '& input': {
-                  color: '#333',
-                  py: 1.5
-                }
-              }
-            }}
-          />
-        </Box>
-
-        <Button
-          onClick={handlePaymentSubmit}
-          variant="contained"
-          fullWidth
-          sx={{
-            backgroundColor: '#3182ce',
-            '&:hover': {
-              backgroundColor: '#2c5aa0'
-            },
-            py: 1.5,
-            mt: 2,
-            fontWeight: 'bold',
-            borderRadius: 1
-          }}
-        >
-          Enregistrer
-        </Button>
-      </Box>
-    </Paper>
-  );
+  // Fonction pour supprimer un service
+  const handleRemoveService = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      serviceIds: prev.serviceIds.filter((_, i) => i !== index),
+      quantites: prev.quantites.filter((_, i) => i !== index),
+      prixs: prev.prixs.filter((_, i) => i !== index)
+    }));
+  };
 
   return (
-    <Fade in={true}>
-      <Box sx={{ display: 'flex', gap: 10, maxWidth: '1200px', mx: 'auto', p: 3 }}>
-        {/* Formulaire principal */}
-        <Paper sx={{ p: 4, borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', flex: 1, mr: 15 }}>
-          <Typography variant="h2" gutterBottom sx={{ color: '#202124' }}>
-            Ajouter une facture (Réf: {nextReference})
-          </Typography>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Nouvelle Facture
+        </Typography>
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Facture créée avec succès !
+          </Alert>
+        )}
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
           <form onSubmit={handleSubmit}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <TextField
-                label="Client"
-                name="customer"
-                value={formData.customer}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                fullWidth
-              />
-              <TextField
-                label="Téléphone"
-                name="telephone"
-                value={formData.telephone}
-                onChange={handleChange}
-                variant="outlined"
-                fullWidth
-              />
-              {settings.useDeliveryConfirmation && (
+            <Grid container spacing={3}>
+              <Grid xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Client"
+                  value={formData.customer}
+                  onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Téléphone"
+                  value={formData.telephone}
+                  onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Date de facture"
+                  type="datetime-local"
+                  value={formData.invoiceDateTime}
+                  onChange={(e) => setFormData({ ...formData, invoiceDateTime: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                />
+              </Grid>
+              <Grid xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Mode de paiement</InputLabel>
+                  <Select
+                    value={formData.mode_paiement || 'CASH'}
+                    onChange={(e) => setFormData({ ...formData, mode_paiement: e.target.value })}
+                    label="Mode de paiement"
+                  >
+                    <MenuItem value="CASH">Espèces</MenuItem>
+                    <MenuItem value="WAVE">Wave</MenuItem>
+                    <MenuItem value="OM">Orange Money</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Montant payé"
+                  type="number"
+                  value={formData.amountPaid}
+                  onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
+                />
+              </Grid>
+              <Grid xs={12} md={6}>
                 <FormControlLabel
                   control={
-                    <Checkbox
-                      name="delivered"
+                    <Switch
                       checked={formData.delivered}
-                      onChange={handleChange}
-                      color="primary"
+                      onChange={(e) => setFormData({ ...formData, delivered: e.target.checked })}
                     />
                   }
-                  label="Livré"
+                  label="Facture livrée"
                 />
-              )}
-              {settings.useAntidate && (
-                <TextField
-                  label="Date de la facture"
-                  type="datetime-local"
-                  name="invoiceDateTime"
-                  value={formData.invoiceDateTime}
-                  onChange={handleChange}
-                  InputLabelProps={{ shrink: true }}
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={3}>
+              <Grid xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Services
+                </Typography>
+                {Array.isArray(formData.serviceIds) && formData.serviceIds.map((_, index) => (
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid xs={12} md={4}>
+                        <FormControl fullWidth required error={!formData.serviceIds[index]}>
+                          <InputLabel>Service</InputLabel>
+                          <Select
+                            value={formData.serviceIds[index] || ''}
+                            onChange={(e) => handleServiceChange(index, 'serviceId', e.target.value)}
+                            label="Service"
+                          >
+                            {Array.isArray(services) && services.map((service) => (
+                              <MenuItem key={service.id} value={service.id}>
+                                {service.designation} - {service.prix} FCFA
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {!formData.serviceIds[index] && (
+                            <FormHelperText>Veuillez sélectionner un service</FormHelperText>
+                          )}
+                        </FormControl>
+                      </Grid>
+                      <Grid xs={12} md={4}>
+                        <TextField
+                          fullWidth
+                          type="number"
+                          label="Quantité"
+                          value={formData.quantites[index] || ''}
+                          onChange={(e) => handleServiceChange(index, 'quantite', parseInt(e.target.value) || 0)}
+                          required
+                        />
+                      </Grid>
+                      <Grid xs={12} md={3}>
+                        <TextField
+                          fullWidth
+                          type="number"
+                          label="Prix"
+                          value={formData.prixs[index] || ''}
+                          onChange={(e) => handleServiceChange(index, 'prix', parseFloat(e.target.value) || 0)}
+                          required
+                        />
+                      </Grid>
+                      <Grid xs={12} md={1}>
+                        <IconButton
+                          color="error"
+                          onClick={() => handleRemoveService(index)}
+                          sx={{ mt: 1 }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ))}
+                <Button
                   variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddService}
+                  sx={{ mt: 2 }}
+                >
+                  Ajouter un service
+                </Button>
+              </Grid>
+
+              <Grid>
+                <TextField
                   fullWidth
+                  multiline
+                  rows={4}
+                  label="Notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
-              )}
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Services
-              </Typography>
-              {formData.serviceIds.map((serviceId, index) => (
-                <Box key={index} sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Service</InputLabel>
-                    <Select
-                      value={serviceId}
-                      onChange={(e) => handleServiceChange(index, 'serviceIds', e.target.value)}
-                      label="Service"
-                    >
-                      <MenuItem value="">Sélectionner un service</MenuItem>
-                      {services.map((service) => (
-                        <MenuItem key={service.id} value={service.id}>
-                          {service.designation} ({service.prix})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <TextField
-                    label="Quantité"
-                    type="number"
-                    value={formData.quantites[index]}
-                    onChange={(e) => handleServiceChange(index, 'quantites', e.target.value)}
-                    variant="outlined"
-                    sx={{ width: '100px' }}
-                    inputProps={{ min: 1 }}
-                  />
-                  <TextField
-                    label="Prix"
-                    value={formData.prixs[index]}
-                    onChange={(e) => handleServiceChange(index, 'prixs', e.target.value)}
-                    variant="outlined"
-                    sx={{ width: '150px' }}
-                  />
-                </Box>
-              ))}
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={addServiceRow}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                Ajouter un service
-              </Button>
-              {settings.usePartialPayment && (
-                <>
-                  <FormControl fullWidth>
-                    <InputLabel>Mode de paiement</InputLabel>
-                    <Select
-                      name="modePaiement"
-                      value={formData.modePaiement}
-                      onChange={handleChange}
-                      label="Mode de paiement"
-                    >
-                      <MenuItem value="">Sélectionner</MenuItem>
-                      <MenuItem value="WAVE">Wave</MenuItem>
-                      <MenuItem value="OM">Orange Money</MenuItem>
-                      <MenuItem value="CASH">Espèces</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <TextField
-                    label="Montant payé"
-                    name="amountPaid"
-                    value={formData.amountPaid}
-                    onChange={handleChange}
-                    variant="outlined"
-                    fullWidth
-                  />
-                  <TextField
-                    label="Date de paiement"
-                    type="datetime-local"
-                    name="paymentDate"
-                    value={formData.paymentDate}
-                    onChange={handleChange}
-                    InputLabelProps={{ shrink: true }}
-                    variant="outlined"
-                    fullWidth
-                  />
-                </>
-              )}
-              <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-                Créer la facture
-              </Button>
-            </Box>
+              </Grid>
+
+              <Grid>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  size="large"
+                >
+                  Créer la facture
+                </Button>
+              </Grid>
+            </Grid>
           </form>
-        </Paper>
-
-        {/* Panneau de paiement */}
-        <PaymentPanel />
-
-        <Snackbar open={openSnackbar} autoHideDuration={4000} onClose={() => setOpenSnackbar(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-          <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-            {successMessage}
-          </Alert>
-        </Snackbar>
-        <Snackbar open={openErrorSnackbar} autoHideDuration={5000} onClose={() => setOpenErrorSnackbar(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-          <Alert onClose={() => setOpenErrorSnackbar(false)} severity="error" sx={{ width: '100%' }}>
-            {errorMessage}
-          </Alert>
-        </Snackbar>
-      </Box>
-    </Fade>
+        )}
+      </Paper>
+    </Container>
   );
 };
 
-export default AddInvoice;
+export default AddInvoice; 
