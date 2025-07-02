@@ -2,6 +2,8 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 COPY . .
+# Fix permissions for mvnw and make it executable
+RUN chmod +x ./mvnw
 RUN ./mvnw clean package -DskipTests
 
 # Production stage
