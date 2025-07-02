@@ -162,9 +162,25 @@ Après le déploiement, vous pouvez vérifier que l'utilisateur admin fonctionne
 4. **Scaling**: Les services peuvent être mis à l'échelle selon vos besoins
 5. **Sécurité**: L'utilisateur admin/admin est créé automatiquement - changez le mot de passe !
 
-## 🆘 Support
+## 🆘 Support et Dépannage
 
+### Problèmes Courants
+
+#### Erreur "failed to read dockerfile"
+Si vous obtenez cette erreur lors du déploiement :
+1. Vérifiez que tous les fichiers sont commités sur GitHub
+2. Utilisez le déploiement manuel (voir guide de dépannage)
+3. Consultez [docs/render-troubleshooting.md](docs/render-troubleshooting.md)
+
+#### Vérification de l'Utilisateur Admin
+```bash
+# Testez la connexion admin/admin
+./scripts/verify-admin-user.sh https://comptel-backend.onrender.com
+```
+
+### Support Général
 En cas de problème:
 1. Vérifiez les logs dans le dashboard Render
 2. Assurez-vous que tous les services sont démarrés
 3. Vérifiez la connectivité entre les services
+4. Consultez la documentation de dépannage

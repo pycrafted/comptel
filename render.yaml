@@ -1,3 +1,6 @@
+# Configuration Render pour l'application Comptel
+# Ce fichier définit tous les services nécessaires pour le déploiement
+
 databases:
   - name: comptel-db
     databaseName: comptel
@@ -5,6 +8,7 @@ databases:
     plan: free
 
 services:
+  # Service Backend Spring Boot
   - type: web
     name: comptel-backend
     env: docker
@@ -40,6 +44,7 @@ services:
         value: 8080
     autoDeploy: true
 
+  # Service Frontend React
   - type: web
     name: comptel-frontend
     env: docker
