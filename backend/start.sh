@@ -19,12 +19,19 @@ if [ -n "$SPRING_DATASOURCE_USERNAME" ] && [ -n "$SPRING_DATASOURCE_PASSWORD" ];
         
         echo "🔍 Host/DB part: $HOST_DB_PART"
         
+        # Convert internal hostname to external hostname
+        # Internal: dpg-d1ig7lumcj7s738s5k80-a
+        # External: dpg-d1ig7lumcj7s738s5k80-a.oregon-postgres.render.com
+        EXTERNAL_HOST_DB_PART=$(echo "$HOST_DB_PART" | sed 's/^dpg-[a-z0-9]*-[a-z0-9]*-[a-z0-9]*$/&.oregon-postgres.render.com/')
+        
+        echo "🔍 External Host/DB part: $EXTERNAL_HOST_DB_PART"
+        
         # URL encode the password
         ENCODED_PASSWORD=$(url_encode "$SPRING_DATASOURCE_PASSWORD")
         
-        # Construct JDBC URL
-        export SPRING_DATASOURCE_URL="jdbc:postgresql://$SPRING_DATASOURCE_USERNAME:$ENCODED_PASSWORD@$HOST_DB_PART"
-        echo "✅ Constructed JDBC URL from individual credentials"
+        # Construct JDBC URL with external hostname
+        export SPRING_DATASOURCE_URL="jdbc:postgresql://$SPRING_DATASOURCE_USERNAME:$ENCODED_PASSWORD@$EXTERNAL_HOST_DB_PART"
+        echo "✅ Constructed JDBC URL from individual credentials with external hostname"
     else
         echo "⚠️  SPRING_DATASOURCE_URL not in expected format, using default"
     fi
@@ -46,6 +53,10 @@ else
             echo "🔍 Credentials part: $CREDENTIALS_PART"
             echo "🔍 Host/DB part: $HOST_DB_PART"
             
+            # Convert internal hostname to external hostname
+            EXTERNAL_HOST_DB_PART=$(echo "$HOST_DB_PART" | sed 's/^dpg-[a-z0-9]*-[a-z0-9]*-[a-z0-9]*$/&.oregon-postgres.render.com/')
+            echo "🔍 External Host/DB part: $EXTERNAL_HOST_DB_PART"
+            
             # Split credentials into username and password
             USERNAME=$(echo "$CREDENTIALS_PART" | cut -d':' -f1)
             PASSWORD=$(echo "$CREDENTIALS_PART" | cut -d':' -f2-)
@@ -57,13 +68,13 @@ else
             if [ -n "$PASSWORD" ]; then
                 ENCODED_PASSWORD=$(url_encode "$PASSWORD")
                 echo "✅ Password URL encoded"
-                export SPRING_DATASOURCE_URL="jdbc:postgresql://$USERNAME:$ENCODED_PASSWORD@$HOST_DB_PART"
+                export SPRING_DATASOURCE_URL="jdbc:postgresql://$USERNAME:$ENCODED_PASSWORD@$EXTERNAL_HOST_DB_PART"
             else
                 echo "⚠️  No password available"
-                export SPRING_DATASOURCE_URL="jdbc:postgresql://$USERNAME@$HOST_DB_PART"
+                export SPRING_DATASOURCE_URL="jdbc:postgresql://$USERNAME@$EXTERNAL_HOST_DB_PART"
             fi
             
-            echo "✅ Converted SPRING_DATASOURCE_URL to JDBC format"
+            echo "✅ Converted SPRING_DATASOURCE_URL to JDBC format with external hostname"
         fi
     else
         echo "⚠️  No SPRING_DATASOURCE_URL provided, using default"
