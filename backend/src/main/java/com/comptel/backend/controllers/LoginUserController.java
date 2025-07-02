@@ -27,7 +27,7 @@ import org.springframework.http.HttpHeaders;
  */
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "https://comptel-frontend.onrender.com"}, allowCredentials = "true")
 public class LoginUserController {
     private static final Logger logger = LoggerFactory.getLogger(LoginUserController.class);
 

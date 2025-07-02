@@ -86,11 +86,7 @@ const Login = () => {
           }}
         >
           <Box sx={{ mb: 3, textAlign: 'center' }}>
-            <img 
-              src="/logo.png" 
-              alt="Logo" 
-              style={{ height: '60px' }}
-            />
+            {/* Logo removed - add your logo file to public/ directory if needed */}
           </Box>
 
           <Typography 
