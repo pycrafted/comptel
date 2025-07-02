@@ -18,17 +18,17 @@ services:
     dockerContext: ./backend
     healthCheckPath: /actuator/health
     envVars:
-      - key: DATABASE_URL
+      - key: SPRING_DATASOURCE_URL
         fromDatabase:
           name: comptel-db
           property: connectionString
         sync: false
-      - key: DB_USER
+      - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: comptel-db
           property: user
         sync: false
-      - key: DB_PASSWORD
+      - key: SPRING_DATASOURCE_PASSWORD
         fromDatabase:
           name: comptel-db
           property: password
