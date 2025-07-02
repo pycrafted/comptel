@@ -1,26 +1,17 @@
 #!/bin/sh
 
-# Script de démarrage pour convertir l'URL de base de données Render
-# Convertit postgresql:// en jdbc:postgresql://
-
 echo "🚀 Starting Comptel Backend..."
 
-# Convert Render's postgresql:// URL to jdbc:postgresql:// format
-if [ -n "$SPRING_DATASOURCE_URL" ]; then
-    case "$SPRING_DATASOURCE_URL" in
-        postgresql://*)
-            SPRING_DATASOURCE_URL=$(echo "$SPRING_DATASOURCE_URL" | sed 's|postgresql://|jdbc:postgresql://|')
-            export SPRING_DATASOURCE_URL
-            echo "✅ Converted database URL: $SPRING_DATASOURCE_URL"
-            ;;
-        *)
-            echo "ℹ️  Database URL already in correct format: $SPRING_DATASOURCE_URL"
-            ;;
-    esac
+# Convert DATABASE_URL from postgresql:// to jdbc:postgresql:// if needed
+if [ -n "$DATABASE_URL" ]; then
+    if echo "$DATABASE_URL" | grep -q '^postgresql://'; then
+        export DATABASE_URL=$(echo "$DATABASE_URL" | sed 's|postgresql://|jdbc:postgresql://|')
+        echo "✅ Converted DATABASE_URL to JDBC format"
+    fi
+    echo "🔧 Using DATABASE_URL: $DATABASE_URL"
 else
-    echo "⚠️  No SPRING_DATASOURCE_URL provided, using default"
+    echo "⚠️  No DATABASE_URL provided, using individual properties"
 fi
 
-# Start the Spring Boot application
 echo "🎯 Starting Spring Boot application..."
 exec java -jar app.jar 
