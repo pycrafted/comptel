@@ -104,5 +104,11 @@ else
 fi
 
 echo "🔧 Using SPRING_DATASOURCE_URL: $SPRING_DATASOURCE_URL"
-echo "🎯 Starting Spring Boot application..."
-exec java -jar app.jar 
+echo "⚡ Starting Spring Boot application with performance optimizations..."
+echo "🔧 JVM Options: $JAVA_OPTS"
+
+# Start with performance optimizations
+exec java $JAVA_OPTS -jar app.jar 
+
+# Start with performance optimizations
+exec java $JAVA_OPTS -jar app.jar 

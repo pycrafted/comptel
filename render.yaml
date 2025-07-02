@@ -8,6 +8,15 @@ databases:
     plan: free
 
 services:
+  # Service de redirection principal (comptel.onrender.com)
+  - type: web
+    name: comptel
+    env: static
+    region: oregon
+    plan: free
+    staticPublishPath: .
+    healthCheckPath: /
+
   # Service Backend Spring Boot
   - type: web
     name: comptel-backend

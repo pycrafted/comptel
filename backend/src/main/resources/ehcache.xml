@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://www.ehcache.org/v3"
+        xmlns:jsr107="http://www.ehcache.org/v3/jsr107">
+
+    <cache alias="default-query-results-region">
+        <resources>
+            <heap unit="entries">1000</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="default-update-timestamps-region">
+        <resources>
+            <heap unit="entries">1000</heap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="org.hibernate.cache.spi.UpdateTimestampsCache">
+        <resources>
+            <heap unit="entries">1000</heap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="org.hibernate.cache.internal.StandardQueryCache">
+        <resources>
+            <heap unit="entries">1000</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <!-- Entity caches -->
+    <cache alias="com.comptel.backend.entity.User">
+        <resources>
+            <heap unit="entries">500</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">60</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Invoice">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Service">
+        <resources>
+            <heap unit="entries">100</heap>
+            <offheap unit="MB">20</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">120</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Payment">
+        <resources>
+            <heap unit="entries">300</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">45</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Input">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Exit">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Depense">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.InvoiceLine">
+        <resources>
+            <heap unit="entries">500</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.GlobalSettings">
+        <resources>
+            <heap unit="entries">10</heap>
+        </resources>
+        <expiry>
+            <ttl unit="hours">24</ttl>
+        </expiry>
+    </cache>
+
+</config> 
+<config xmlns="http://www.ehcache.org/v3"
+        xmlns:jsr107="http://www.ehcache.org/v3/jsr107">
+
+    <cache alias="default-query-results-region">
+        <resources>
+            <heap unit="entries">1000</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="default-update-timestamps-region">
+        <resources>
+            <heap unit="entries">1000</heap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="org.hibernate.cache.spi.UpdateTimestampsCache">
+        <resources>
+            <heap unit="entries">1000</heap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="org.hibernate.cache.internal.StandardQueryCache">
+        <resources>
+            <heap unit="entries">1000</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <!-- Entity caches -->
+    <cache alias="com.comptel.backend.entity.User">
+        <resources>
+            <heap unit="entries">500</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">60</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Invoice">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Service">
+        <resources>
+            <heap unit="entries">100</heap>
+            <offheap unit="MB">20</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">120</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Payment">
+        <resources>
+            <heap unit="entries">300</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">45</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Input">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Exit">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.Depense">
+        <resources>
+            <heap unit="entries">200</heap>
+            <offheap unit="MB">50</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.InvoiceLine">
+        <resources>
+            <heap unit="entries">500</heap>
+            <offheap unit="MB">100</offheap>
+        </resources>
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+    </cache>
+
+    <cache alias="com.comptel.backend.entity.GlobalSettings">
+        <resources>
+            <heap unit="entries">10</heap>
+        </resources>
+        <expiry>
+            <ttl unit="hours">24</ttl>
+        </expiry>
+    </cache>
+
+</config> 
