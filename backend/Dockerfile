@@ -13,8 +13,8 @@ COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 COPY --from=build /app/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
-# JVM Performance optimizations
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -XX:+UnlockExperimentalVMOptions -XX:+UseZGC"
+# JVM Performance optimizations (fixed - removed conflicting GC options)
+ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseZGC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp"
 
 EXPOSE 8080
 CMD ["/app/start.sh"]
