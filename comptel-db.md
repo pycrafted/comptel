@@ -67,19 +67,19 @@ Username
 comptel_user
 
 Password
-Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j
+"Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j"
 
 
 Internal Database URL
-postgresql://comptel_user:Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j@dpg-d1ig7lumcj7s738s5k80-a/comptel
+"postgresql://comptel_user:Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j@dpg-d1ig7lumcj7s738s5k80-a/comptel"
 
 
 External Database URL
-postgresql://comptel_user:Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j@dpg-d1ig7lumcj7s738s5k80-a.oregon-postgres.render.com/comptel
+"postgresql://comptel_user:Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j@dpg-d1ig7lumcj7s738s5k80-a.oregon-postgres.render.com/comptel"
 
 
 PSQL Command
-PGPASSWORD=Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j psql -h dpg-d1ig7lumcj7s738s5k80-a.oregon-postgres.render.com -U comptel_user comptel
+"PGPASSWORD=Ft9BGWDZEInRTEGgySf8cVHAPmTAz21j psql -h dpg-d1ig7lumcj7s738s5k80-a.oregon-postgres.render.com -U comptel_user comptel"
 
 
 Access Control
