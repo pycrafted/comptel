@@ -10,7 +10,5 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
-COPY --from=build /app/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
 EXPOSE 8080
-CMD ["/app/start.sh"]
+CMD ["sh", "-c", "if echo \"$SPRING_DATASOURCE_URL\" | grep -q '^postgresql://'; then export SPRING_DATASOURCE_URL=\$(echo \"$SPRING_DATASOURCE_URL\" | sed 's|postgresql://|jdbc:postgresql://|'); fi; echo \"🚀 Starting with URL: $SPRING_DATASOURCE_URL\"; java -jar app.jar"]
