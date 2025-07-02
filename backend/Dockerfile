@@ -10,7 +10,7 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
-COPY start.sh /app/start.sh
+COPY --from=build /app/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 EXPOSE 8080
 CMD ["/app/start.sh"]
