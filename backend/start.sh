@@ -109,6 +109,3 @@ echo "🔧 JVM Options: $JAVA_OPTS"
 
 # Start with performance optimizations
 exec java $JAVA_OPTS -jar app.jar 
-
-# Start with performance optimizations
-exec java $JAVA_OPTS -jar app.jar 
