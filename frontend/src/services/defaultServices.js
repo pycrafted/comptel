@@ -1,4 +1,5 @@
 import axios from 'axios';
+import config from '../config';
 
 export const initializeDefaultServices = async () => {
   try {
@@ -16,7 +17,7 @@ export const initializeDefaultServices = async () => {
     ];
 
     for (const service of defaultServices) {
-      await axios.post('http://localhost:8080/api/services', service);
+      await axios.post(`${config.apiUrl}/services`, service);
     }
     console.log('Services par défaut initialisés');
     return true;
@@ -29,14 +30,14 @@ export const initializeDefaultServices = async () => {
 export const fetchServices = async () => {
   try {
     console.log('Début du chargement des données...');
-    const response = await axios.get('http://localhost:8080/api/services');
+    const response = await axios.get(`${config.apiUrl}/services`);
     console.log('Réponse reçue:', response);
     
     if (response.data && response.data.length === 0) {
       // Si aucun service n'existe, initialiser les services par défaut
       await initializeDefaultServices();
       // Recharger les services après l'initialisation
-      const newResponse = await axios.get('http://localhost:8080/api/services');
+      const newResponse = await axios.get(`${config.apiUrl}/services`);
       return newResponse.data;
     }
     

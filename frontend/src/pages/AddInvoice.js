@@ -50,44 +50,47 @@ const AddInvoice = () => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    const loadServices = async () => {
-      const servicesData = await fetchServices();
-      setServices(servicesData);
-    };
-    loadServices();
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
       try {
+        setLoading(true);
         console.log('Début du chargement des données...');
-        const response = await invoiceApi.getAddData();
-        console.log('Réponse reçue:', response);
         
-        if (!response || !response.data) {
-          console.error('La réponse est vide ou invalide');
-          setError('Erreur: Aucune donnée reçue du serveur');
-          return;
+        // Essayer d'abord l'API principale
+        try {
+          const response = await invoiceApi.getAddData();
+          console.log('Réponse API principale reçue:', response);
+          
+          if (response && response.data) {
+            const { services: servicesData, nextReference } = response.data;
+            
+            if (servicesData && Array.isArray(servicesData)) {
+              console.log('Services chargés via API principale:', servicesData);
+              setServices(servicesData);
+              
+              if (nextReference) {
+                setFormData(prev => ({
+                  ...prev,
+                  reference: nextReference
+                }));
+              }
+              return; // Sortir si tout va bien
+            }
+          }
+        } catch (apiError) {
+          console.warn('Erreur API principale, tentative avec fetchServices:', apiError);
         }
-
-        const { services: servicesData, nextReference } = response.data;
         
-        if (!servicesData) {
-          console.error('La liste des services est manquante dans la réponse');
-          setError('Erreur: Liste des services non disponible');
-          return;
-        }
-
-        console.log('Services chargés:', servicesData);
-        setServices(servicesData);
-        console.log('État des services mis à jour');
+        // Fallback vers fetchServices si l'API principale échoue
+        console.log('Tentative avec fetchServices...');
+        const servicesData = await fetchServices();
+        console.log('Services chargés via fetchServices:', servicesData);
         
-        if (nextReference) {
-          setFormData(prev => ({
-            ...prev,
-            reference: nextReference
-          }));
+        if (servicesData && Array.isArray(servicesData)) {
+          setServices(servicesData);
+        } else {
+          setError('Erreur: Impossible de charger les services');
         }
+        
       } catch (err) {
         console.error('Erreur détaillée lors du chargement:', err);
         console.error('Message d\'erreur:', err.message);
@@ -97,7 +100,8 @@ const AddInvoice = () => {
         setLoading(false);
       }
     };
-    fetchData();
+    
+    loadData();
   }, []);
 
   const handleServiceChange = (index, field, value) => {
