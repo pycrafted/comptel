@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 public class Invoice {
@@ -27,10 +27,10 @@ public class Invoice {
     private LocalDateTime deliveredDate;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL)
-    private List<InvoiceLine> invoiceServices = new ArrayList<>();
+    private Set<InvoiceLine> invoiceServices = new HashSet<>();
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL)
-    private List<Payment> payments = new ArrayList<>(); // Correction ici : initialisation propre
+    private Set<Payment> payments = new HashSet<>();
 
     // Méthode pour mettre à jour le solde
     public void updateBalance() {
@@ -130,19 +130,19 @@ public class Invoice {
         this.deliveredDate = deliveredDate;
     }
 
-    public List<InvoiceLine> getInvoiceServices() {
+    public Set<InvoiceLine> getInvoiceServices() {
         return invoiceServices;
     }
 
-    public void setInvoiceServices(List<InvoiceLine> invoiceServices) {
+    public void setInvoiceServices(Set<InvoiceLine> invoiceServices) {
         this.invoiceServices = invoiceServices;
     }
 
-    public List<Payment> getPayments() {
+    public Set<Payment> getPayments() {
         return payments;
     }
 
-    public void setPayments(List<Payment> payments) {
+    public void setPayments(Set<Payment> payments) {
         this.payments = payments;
     }
 

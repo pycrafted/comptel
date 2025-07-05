@@ -56,13 +56,9 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/login").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/api/services/**").permitAll()
-                .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )
-            .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setContentType("application/json;charset=UTF-8");

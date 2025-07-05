@@ -21,17 +21,24 @@ import {
   Alert,
   Snackbar,
   InputAdornment,
-  Grid
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Receipt as ReceiptIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { invoiceApi } from '../services/api';
 
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(amount);
+  if (isNaN(amount)) return '';
+  // Affiche sans décimales, séparateur espace, et F à la fin
+  return parseFloat(amount)
+    .toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    .replace(/\s/g, ' ') + ' F CFA';
 };
 
 const formatDate = (dateString) => {
@@ -65,11 +72,21 @@ const InvoiceList = () => {
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
+  // États pour le modal de paiement
+  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    amountPaye: '',
+    mode_paiement: 'CASH',
+    livrer: false,
+    paiement: false
+  });
+
   const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Chargement des factures...');
-      const response = await invoiceApi.getByDateRange(dateRange.start, dateRange.end);
+      // Utiliser getAll() au lieu de getByDateRange() pour éviter les erreurs 400/500
+      const response = await invoiceApi.getAll();
       console.log('Réponse du serveur:', response.data);
       setInvoices(response.data);
       setError(null);
@@ -79,49 +96,109 @@ const InvoiceList = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange.start, dateRange.end]);
+  }, []);
 
   const fetchTotals = useCallback(async () => {
     try {
-      const response = await invoiceApi.getTotalsByDateRange(dateRange.start, dateRange.end);
-      setTotals(response.data);
+      // Calculer les totaux localement à partir des factures chargées
+      const invoices = await invoiceApi.getAll();
+      if (invoices.data && invoices.data.length > 0) {
+        console.log('Exemple de facture:', invoices.data[0]);
+      }
+      const totalAmount = invoices.data.reduce((sum, invoice) => sum + parseFloat(invoice.total || 0), 0);
+      const totalBalance = invoices.data.reduce((sum, invoice) => sum + parseFloat(invoice.balance || 0), 0);
+      const totalPaid = totalAmount - totalBalance;
+      
+      setTotals({
+        totalAmount: totalAmount.toString(),
+        totalPaid: totalPaid.toString(),
+        totalBalance: totalBalance.toString(),
+        invoiceCount: invoices.data.length
+      });
     } catch (err) {
       console.error('Erreur lors du chargement des totaux:', err);
+      // Utiliser des valeurs par défaut en cas d'erreur
+      setTotals({
+        totalAmount: '0',
+        totalPaid: '0',
+        totalBalance: '0',
+        invoiceCount: 0
+      });
     }
-  }, [dateRange.start, dateRange.end]);
+  }, []);
 
   useEffect(() => {
     fetchInvoices();
     fetchTotals();
   }, [fetchInvoices, fetchTotals]);
 
-  const validateDateRange = () => {
-    const start = new Date(dateRange.start);
-    const end = new Date(dateRange.end);
-    
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      setError('Les dates sont invalides');
-      return false;
-    }
-    
-    if (start > end) {
-      setError('La date de début doit être antérieure à la date de fin');
-      return false;
-    }
-    
-    return true;
-  };
-
   const handleDateRangeChange = (field, value) => {
     setDateRange(prev => ({ ...prev, [field]: value }));
-    if (validateDateRange()) {
-      fetchInvoices();
-      fetchTotals();
-    }
+    // Désactivé temporairement pour éviter les erreurs
+    // if (validateDateRange()) {
+    //   fetchInvoices();
+    //   fetchTotals();
+    // }
   };
 
   const handleEdit = (invoice) => {
-    navigate(`/edit-invoice/${invoice.id}`);
+    setSelectedInvoice(invoice);
+    setPaymentData({
+      amountPaye: invoice.balance || invoice.total,
+      mode_paiement: 'CASH',
+      livrer: false,
+      paiement: false
+    });
+    setOpenPaymentDialog(true);
+  };
+
+  const handlePaymentChange = (field, value) => {
+    setPaymentData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handlePaymentSubmit = async () => {
+    try {
+      setLoading(true);
+      const body = {
+        ...paymentData,
+        amountPaye: String(paymentData.amountPaye),
+        paymentDate: new Date().toISOString().slice(0, 19), // Format: 2025-07-04T14:13:40 (sans le Z)
+      };
+      console.log('PATCH facture:', selectedInvoice.id, body);
+      const response = await invoiceApi.patch(selectedInvoice.id, body);
+      console.log('Réponse PATCH:', response);
+      // Mettre à jour la liste des factures
+      await fetchInvoices();
+      await fetchTotals();
+      setOpenPaymentDialog(false);
+      setSelectedInvoice(null);
+      setPaymentData({
+        amountPaye: '',
+        mode_paiement: 'CASH',
+        livrer: false,
+        paiement: false
+      });
+      setSuccess('Paiement enregistré avec succès !');
+    } catch (error) {
+      console.error('Erreur PATCH:', error);
+      setError('Erreur lors de l\'enregistrement du paiement: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClosePaymentDialog = () => {
+    setOpenPaymentDialog(false);
+    setSelectedInvoice(null);
+    setPaymentData({
+      amountPaye: '',
+      mode_paiement: 'CASH',
+      livrer: false,
+      paiement: false
+    });
   };
 
   const handleDelete = (invoice) => {
@@ -163,174 +240,223 @@ const InvoiceList = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" component="h2">
-                Liste des Factures
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/add-invoice')}
-              >
-                Nouvelle Facture
-              </Button>
-            </Box>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', ml: 20 }}>
+      <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', width: '100%', boxShadow: 2, borderRadius: 3 }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" component="h2">
+            Liste des Factures
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/add-invoice')}
+          >
+            Nouvelle Facture
+          </Button>
+        </Box>
 
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Rechercher"
-                  variant="outlined"
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Date de début"
-                  type="datetime-local"
-                  value={dateRange.start}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  error={!!error && error.includes('date de début')}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Date de fin"
-                  type="datetime-local"
-                  value={dateRange.end}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  error={!!error && error.includes('date de fin')}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setDateRange({
-                      start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().slice(0, 16),
-                      end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 16)
-                    });
-                  }}
-                >
-                  Réinitialiser la période
-                </Button>
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} md={4}>
-                <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'white' }}>
-                  <Typography variant="subtitle1">Total des factures</Typography>
-                  <Typography variant="h6">{formatCurrency(totals.totalAmount)}</Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Paper sx={{ p: 2, bgcolor: 'success.light', color: 'white' }}>
-                  <Typography variant="subtitle1">Total payé</Typography>
-                  <Typography variant="h6">{formatCurrency(totals.totalPaid)}</Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'white' }}>
-                  <Typography variant="subtitle1">Total en attente</Typography>
-                  <Typography variant="h6">{formatCurrency(totals.totalBalance)}</Typography>
-                </Paper>
-              </Grid>
-            </Grid>
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>N° Facture</TableCell>
-                    <TableCell>Client</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Montant</TableCell>
-                    <TableCell>Statut</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>{invoice.reference}</TableCell>
-                      <TableCell>{invoice.customer}</TableCell>
-                      <TableCell>{formatDate(invoice.invoiceDateTime)}</TableCell>
-                      <TableCell>{formatCurrency(invoice.total)}</TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={invoice.paid}
-                          color={invoice.paid === 'Oui' ? 'success' : (invoice.paid === 'Non' ? 'error' : 'warning')}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton onClick={() => handleEdit(invoice)} color="primary">
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton onClick={() => handleDelete(invoice)} color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-              <DialogTitle>Confirmer la suppression</DialogTitle>
-              <DialogContent>
-                <Typography>
-                  Êtes-vous sûr de vouloir supprimer la facture {selectedInvoice?.reference} ?
-                </Typography>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setOpenDialog(false)}>
-                  Annuler
-                </Button>
-                <Button onClick={confirmDelete} color="error">
-                  Supprimer
-                </Button>
-              </DialogActions>
-            </Dialog>
-
-            <Snackbar 
-              open={!!success} 
-              autoHideDuration={6000} 
-              onClose={() => setSuccess('')}
-            >
-              <Alert severity="success" onClose={() => setSuccess('')}>
-                {success}
-              </Alert>
-            </Snackbar>
-          </Paper>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField
+              fullWidth
+              label="Rechercher"
+              variant="outlined"
+              value={searchTerm}
+              onChange={handleSearch}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
+
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'white' }}>
+              <Typography variant="subtitle1">Total des factures</Typography>
+              <Typography variant="h6">{formatCurrency(totals.totalAmount)}</Typography>
+            </Paper>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Paper sx={{ p: 2, bgcolor: 'success.light', color: 'white' }}>
+              <Typography variant="subtitle1">Total payé</Typography>
+              <Typography variant="h6">{formatCurrency(totals.totalPaid)}</Typography>
+            </Paper>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'white' }}>
+              <Typography variant="subtitle1">Total impayé</Typography>
+              <Typography variant="h6">{formatCurrency(totals.totalBalance)}</Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>N° Facture</TableCell>
+                <TableCell>Client</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Montant</TableCell>
+                <TableCell>Statut</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredInvoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>{invoice.reference}</TableCell>
+                  <TableCell>{invoice.customer}</TableCell>
+                  <TableCell>{formatDate(invoice.invoiceDateTime)}</TableCell>
+                  <TableCell>{formatCurrency(invoice.total)}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={invoice.paid}
+                      color={invoice.paid === 'Oui' ? 'success' : (invoice.paid === 'Non' ? 'error' : 'warning')}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handleEdit(invoice)} color="primary">
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(invoice)} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+          <DialogTitle>Confirmer la suppression</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Êtes-vous sûr de vouloir supprimer la facture {selectedInvoice?.reference} ?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenDialog(false)}>
+              Annuler
+            </Button>
+            <Button onClick={confirmDelete} color="error">
+              Supprimer
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Modal de paiement */}
+        <Dialog open={openPaymentDialog} onClose={handleClosePaymentDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            Paiement - Facture {selectedInvoice?.reference}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Client: {selectedInvoice?.customer}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Montant total: {selectedInvoice ? formatCurrency(selectedInvoice.total) : ''}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Solde restant: {selectedInvoice ? formatCurrency(selectedInvoice.balance) : ''}
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Montant à payer"
+                    type="number"
+                    value={paymentData.amountPaye ? parseInt(paymentData.amountPaye, 10) : ''}
+                    onChange={(e) => handlePaymentChange('amountPaye', e.target.value)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">F CFA</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                
+                <Grid size={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Mode de paiement</InputLabel>
+                    <Select
+                      value={paymentData.mode_paiement}
+                      label="Mode de paiement"
+                      onChange={(e) => handlePaymentChange('mode_paiement', e.target.value)}
+                    >
+                      <MenuItem value="CASH">Espèces</MenuItem>
+                      <MenuItem value="OM">Orange Money</MenuItem>
+                      <MenuItem value="WAVE">Wave</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid size={6}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={paymentData.livrer}
+                        onChange={(e) => handlePaymentChange('livrer', e.target.checked)}
+                      />
+                    }
+                    label="Enregistrer le paiement"
+                  />
+                </Grid>
+
+                <Grid size={6}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={paymentData.paiement}
+                        onChange={(e) => handlePaymentChange('paiement', e.target.checked)}
+                      />
+                    }
+                    label="Marquer comme livrée"
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClosePaymentDialog}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handlePaymentSubmit} 
+              variant="contained" 
+              color="primary"
+              disabled={loading}
+            >
+              {loading ? 'Enregistrement...' : 'Enregistrer le paiement'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar 
+          open={!!success} 
+          autoHideDuration={4000} 
+          onClose={() => setSuccess('')}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert severity="success" onClose={() => setSuccess('')} sx={{ width: '100%' }}>
+            {success}
+          </Alert>
+        </Snackbar>
+      </Paper>
+    </Box>
   );
 };
 

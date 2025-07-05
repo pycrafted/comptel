@@ -25,10 +25,8 @@ import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/ico
 import { inputApi } from '../services/api';
 
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(amount);
+  if (!amount || amount === '0') return '0 FCFA';
+  return parseFloat(amount).toLocaleString('fr-FR') + ' FCFA';
 };
 
 const Receipt = () => {
@@ -43,9 +41,9 @@ const Receipt = () => {
     date: new Date().toISOString(),
     description: ''
   });
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setDate(1)).toISOString(),
-    end: new Date().toISOString()
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [totals, setTotals] = useState({
     total: 0,
@@ -55,12 +53,16 @@ const Receipt = () => {
   useEffect(() => {
     fetchInputs();
     fetchTotals();
-  }, [dateRange]);
+  }, [selectedMonth]);
 
   const fetchInputs = async () => {
     try {
       setLoading(true);
-      const response = await inputApi.getByDateRange(dateRange.start, dateRange.end);
+      const [year, month] = selectedMonth.split('-');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+      
+      const response = await inputApi.getByDateRange(startDate.toISOString(), endDate.toISOString());
       setInputs(response.data);
       setError(null);
     } catch (err) {
@@ -73,8 +75,12 @@ const Receipt = () => {
 
   const fetchTotals = async () => {
     try {
+      const [year, month] = selectedMonth.split('-');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+      
       const [totalResponse, byModeResponse] = await Promise.all([
-        inputApi.getTotalsByDateRange(dateRange.start, dateRange.end),
+        inputApi.getTotalsByDateRange(startDate.toISOString(), endDate.toISOString()),
         inputApi.getTotalsByMode('ALL')
       ]);
       setTotals({
@@ -86,28 +92,8 @@ const Receipt = () => {
     }
   };
 
-  const handleDateRangeChange = (field, value) => {
-    setDateRange(prev => ({ ...prev, [field]: value }));
-    if (validateDateRange()) {
-      fetchInputs();
-    }
-  };
-
-  const validateDateRange = () => {
-    const start = new Date(dateRange.start);
-    const end = new Date(dateRange.end);
-    
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      setError('Les dates sont invalides');
-      return false;
-    }
-    
-    if (start > end) {
-      setError('La date de début doit être antérieure à la date de fin');
-      return false;
-    }
-    
-    return true;
+  const handleMonthChange = (event) => {
+    setSelectedMonth(event.target.value);
   };
 
   const handleFormChange = (field, value) => {
@@ -172,7 +158,7 @@ const Receipt = () => {
   };
 
   const calculateTotal = () => {
-    return inputs.reduce((sum, input) => sum + input.montant, 0);
+    return inputs.reduce((sum, input) => sum + parseFloat(input.montants || 0), 0);
   };
 
   if (loading) {
@@ -184,8 +170,9 @@ const Receipt = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', ml: 35 }}>
+      <Container sx={{ width: '100%', maxWidth: 'none' }}>
+        <Grid container spacing={3}>
         <Grid item xs={12}>
           <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -212,26 +199,14 @@ const Receipt = () => {
             </Box>
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="Date de début"
-                  type="datetime-local"
-                  value={dateRange.start}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                  label="Sélectionner le mois"
+                  type="month"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
                   InputLabelProps={{ shrink: true }}
-                  error={!!error && error.includes('date de début')}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date de fin"
-                  type="datetime-local"
-                  value={dateRange.end}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  error={!!error && error.includes('date de fin')}
                 />
               </Grid>
             </Grid>
@@ -272,7 +247,7 @@ const Receipt = () => {
                   ))}
                   <TableRow>
                     <TableCell colSpan={2}><strong>Total</strong></TableCell>
-                    <TableCell><strong>{formatCurrency(parseFloat(totals.total))}</strong></TableCell>
+                    <TableCell><strong>{formatCurrency(calculateTotal())}</strong></TableCell>
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
                 </TableBody>
@@ -280,7 +255,7 @@ const Receipt = () => {
             </TableContainer>
 
             <Box sx={{ mt: 2 }}>
-              <Typography variant="h6">Total par mode de paiement</Typography>
+              
               <Grid container spacing={2}>
                 {Object.entries(totals.byMode || {}).map(([mode, amount]) => (
                   <Grid item xs={12} sm={4} key={mode}>
@@ -295,6 +270,7 @@ const Receipt = () => {
           </Paper>
         </Grid>
       </Grid>
+    </Container>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>
@@ -356,7 +332,7 @@ const Receipt = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

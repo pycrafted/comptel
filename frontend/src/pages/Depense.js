@@ -67,17 +67,10 @@ const Depense = () => {
     montant: '',
     typeDepense: 'RETRAIT',
   });
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('.')[0],
-    end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('.')[0]
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-
-  const resetDateRange = () => {
-    setDateRange({
-      start: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('.')[0],
-      end: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('.')[0]
-    });
-  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -107,9 +100,13 @@ const Depense = () => {
     }
     
     try {
-      console.log('Début fetchExits avec dateRange:', dateRange);
+      console.log('Début fetchExits avec selectedMonth:', selectedMonth);
       setLoading(true);
-      const response = await exitApi.getByDateRange(dateRange.start, dateRange.end);
+      const [year, month] = selectedMonth.split('-');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+      
+      const response = await exitApi.getByDateRange(startDate.toISOString(), endDate.toISOString());
       console.log('Réponse fetchExits:', response.data);
       setExits(response.data);
       setError(null);
@@ -123,7 +120,7 @@ const Depense = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, isAuthenticated]);
+  }, [selectedMonth, isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -131,12 +128,8 @@ const Depense = () => {
     }
   }, [fetchExits, isAuthenticated]);
 
-  const handleDateRangeChange = (e) => {
-    const { name, value } = e.target;
-    setDateRange(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  const handleMonthChange = (event) => {
+    setSelectedMonth(event.target.value);
   };
 
   const handleInputChange = (e) => {
@@ -235,6 +228,10 @@ const Depense = () => {
     }
   };
 
+  const calculateTotal = () => {
+    return exits.reduce((sum, exit) => sum + parseFloat(exit.montant || 0), 0);
+  };
+
   if (loading) {
     return (
       <Container>
@@ -244,22 +241,16 @@ const Depense = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        <Grid xs={12}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', ml: 35 }}>
+      <Container sx={{ width: '100%', maxWidth: 'none' }}>
+        <Grid container spacing={3}>
+          <Grid xs={12}>
+            <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography component="h1" variant="h5">
                 Gestion des Dépenses
               </Typography>
               <Box>
-                <Button
-                  variant="outlined"
-                  onClick={resetDateRange}
-                  sx={{ mr: 2 }}
-                >
-                  Réinitialiser la période
-                </Button>
                 <Button
                   variant="contained"
                   color="primary"
@@ -284,22 +275,10 @@ const Depense = () => {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     fullWidth
-                    type="datetime-local"
-                    label="Date de début"
-                    name="start"
-                    value={dateRange.start}
-                    onChange={handleDateRangeChange}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    type="datetime-local"
-                    label="Date de fin"
-                    name="end"
-                    value={dateRange.end}
-                    onChange={handleDateRangeChange}
+                    type="month"
+                    label="Sélectionner le mois"
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
@@ -340,6 +319,11 @@ const Depense = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+                  <TableRow>
+                    <TableCell colSpan={3}><strong>Total</strong></TableCell>
+                    <TableCell><strong>{formatCurrency(calculateTotal())}</strong></TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
@@ -398,7 +382,8 @@ const Depense = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

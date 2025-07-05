@@ -7,8 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class InvoiceService {
@@ -59,7 +59,7 @@ public class InvoiceService {
      */
     @Transactional
     public Invoice createInvoice(String customer, String telephone, boolean delivered, LocalDateTime invoiceDateTime,
-                                 List<Long> serviceIds, List<Integer> quantites, List<BigDecimal> prixs,
+                                 java.util.List<Long> serviceIds, java.util.List<Integer> quantites, java.util.List<BigDecimal> prixs,
                                  Payment.ModePaiement modePaiement, BigDecimal amountPaid, LocalDateTime paymentDate,
                                  User saveBy) {
         Integer lastReference = invoiceRepository.findMaxReference();
@@ -77,7 +77,7 @@ public class InvoiceService {
         }
 
         BigDecimal total = BigDecimal.ZERO;
-        List<InvoiceLine> invoiceLines = new ArrayList<>();
+        Set<InvoiceLine> invoiceLines = new HashSet<>();
         for (int i = 0; i < serviceIds.size(); i++) {
             final Long serviceId = serviceIds.get(i); // Variable finale pour la lambda
             com.comptel.backend.entity.Service  service = serviceRepository.findById(serviceId).orElseThrow(() -> new RuntimeException("Service non trouvé : " + serviceId));

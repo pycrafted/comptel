@@ -18,4 +18,19 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Integer findMaxReference();
 
     List<Invoice> findByInvoiceDateTimeBetween(LocalDateTime start, LocalDateTime end);
+    
+    /**
+     * Récupère toutes les factures avec leurs services chargés en une seule requête.
+     * Utilise un fetch join pour éviter les problèmes de lazy loading.
+     */
+    @Query("SELECT DISTINCT i FROM Invoice i " +
+           "LEFT JOIN FETCH i.invoiceServices " +
+           "ORDER BY i.invoiceDateTime DESC")
+    List<Invoice> findAllWithServices();
+
+    /**
+     * Récupère les 5 dernières factures ordonnées par date de création décroissante.
+     */
+    @Query("SELECT i FROM Invoice i ORDER BY i.invoiceDateTime DESC LIMIT 5")
+    List<Invoice> findTop5ByOrderByInvoiceDateTimeDesc();
 }

@@ -18,6 +18,8 @@ import {
   Box,
   CircularProgress,
   IconButton,
+  Snackbar,
+  Divider,
 } from '@mui/material';
 import { invoiceApi } from '../services/api';
 import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
@@ -182,7 +184,6 @@ const AddInvoice = () => {
     // Validation des champs requis
     const newErrors = {};
     if (!formData.customer) newErrors.customer = 'Le nom du client est requis';
-    if (!formData.telephone) newErrors.telephone = 'Le numéro de téléphone est requis';
     if (!formData.invoiceDateTime) newErrors.invoiceDateTime = 'La date est requise';
 
     // Vérification des services
@@ -233,9 +234,9 @@ const AddInvoice = () => {
           amountPaid: ''
         });
         setErrors({});
-        alert('Facture créée avec succès !');
+        setSuccess(true);
       } else {
-        alert('Erreur lors de la création de la facture : ' + response.data.error);
+        setError('Erreur lors de la création de la facture : ' + response.data.error);
       }
     } catch (error) {
       console.error('Erreur détaillée:', error);
@@ -266,192 +267,205 @@ const AddInvoice = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Nouvelle Facture
-        </Typography>
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', ml: 14 }}>
+      <Container sx={{ width: '100%', maxWidth: 'none' }}>
+      <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 2 }}>
+        <form onSubmit={handleSubmit}>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
+            Nouvelle Facture
+          </Typography>
+          <Divider sx={{ mb: 3 }} />
+
+          {/* Section Client */}
+          <Grid container spacing={3} sx={{ mb: 2 }}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Client"
+                value={formData.customer}
+                onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                required
+                error={!!errors.customer}
+                helperText={errors.customer}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Téléphone"
+                value={formData.telephone}
+                onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                error={!!errors.telephone}
+                helperText={errors.telephone}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Date de facture"
+                type="datetime-local"
+                value={formData.invoiceDateTime}
+                onChange={(e) => setFormData({ ...formData, invoiceDateTime: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                required
+                error={!!errors.invoiceDateTime}
+                helperText={errors.invoiceDateTime}
+              />
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 3 }} />
+
+          {/* Section Services */}
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Services
+          </Typography>
+          {Array.isArray(formData.serviceIds) && formData.serviceIds.map((_, index) => (
+            <Box key={index} sx={{ mb: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={5}>
+                  <FormControl fullWidth required error={!formData.serviceIds[index] || !!errors.serviceIds}>
+                    <InputLabel>Service</InputLabel>
+                    <Select
+                      value={formData.serviceIds[index] || ''}
+                      onChange={(e) => handleServiceChange(index, 'serviceId', e.target.value)}
+                      label="Service"
+                    >
+                      {Array.isArray(services) && services.map((service) => (
+                        <MenuItem key={service.id} value={service.id}>
+                          {service.designation} - {service.prix} FCFA
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {(!formData.serviceIds[index] || !!errors.serviceIds) && (
+                      <FormHelperText>{errors.serviceIds || 'Veuillez sélectionner un service'}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Quantité"
+                    value={formData.quantites[index] || ''}
+                    onChange={(e) => handleServiceChange(index, 'quantite', parseInt(e.target.value) || 0)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={6} md={3}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Prix"
+                    value={formData.prixs[index] || ''}
+                    onChange={(e) => handleServiceChange(index, 'prix', parseFloat(e.target.value) || 0)}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} md={1} sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <IconButton color="error" onClick={() => handleRemoveService(index)} disabled={formData.serviceIds.length === 1}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Grid>
+              </Grid>
+            </Box>
+          ))}
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={handleAddService}
+            sx={{ mb: 2 }}
+          >
+            Ajouter un service
+          </Button>
+
+          {/* Résumé du total */}
+          <Box sx={{ my: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Total : {calculateTotal().toLocaleString('fr-FR')} FCFA
+            </Typography>
+          </Box>
+
+          <Divider sx={{ my: 3 }} />
+
+          {/* Section Paiement */}
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Paiement
+          </Typography>
+          <Grid container spacing={3} sx={{ mb: 2 }}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Mode de paiement</InputLabel>
+                <Select
+                  value={formData.mode_paiement || 'CASH'}
+                  onChange={(e) => setFormData({ ...formData, mode_paiement: e.target.value })}
+                  label="Mode de paiement"
+                >
+                  <MenuItem value="CASH">Espèces</MenuItem>
+                  <MenuItem value="WAVE">Wave</MenuItem>
+                  <MenuItem value="OM">Orange Money</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Montant payé"
+                type="number"
+                value={formData.amountPaid}
+                onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Date de paiement"
+                type="datetime-local"
+                value={formData.paymentDate || ''}
+                onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.delivered}
+                    onChange={(e) => setFormData({ ...formData, delivered: e.target.checked })}
+                  />
+                }
+                label="Facture livrée"
+              />
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 3 }} />
+
+          {/* Bouton de soumission */}
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            size="large"
+            fullWidth
+            sx={{ py: 2, fontWeight: 700, fontSize: '1.1rem', borderRadius: 2 }}
+          >
+            Créer la facture
+          </Button>
+        </form>
+        <Snackbar
+          open={success}
+          autoHideDuration={4000}
+          onClose={() => setSuccess(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setSuccess(false)} severity="success" sx={{ width: '100%' }}>
             Facture créée avec succès !
           </Alert>
-        )}
-
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Client"
-                  value={formData.customer}
-                  onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-                  required
-                />
-              </Grid>
-              <Grid xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Téléphone"
-                  value={formData.telephone}
-                  onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                  required
-                />
-              </Grid>
-              <Grid xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date de facture"
-                  type="datetime-local"
-                  value={formData.invoiceDateTime}
-                  onChange={(e) => setFormData({ ...formData, invoiceDateTime: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-              <Grid xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Mode de paiement</InputLabel>
-                  <Select
-                    value={formData.mode_paiement || 'CASH'}
-                    onChange={(e) => setFormData({ ...formData, mode_paiement: e.target.value })}
-                    label="Mode de paiement"
-                  >
-                    <MenuItem value="CASH">Espèces</MenuItem>
-                    <MenuItem value="WAVE">Wave</MenuItem>
-                    <MenuItem value="OM">Orange Money</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Montant payé"
-                  type="number"
-                  value={formData.amountPaid}
-                  onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
-                />
-              </Grid>
-              <Grid xs={12} md={6}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.delivered}
-                      onChange={(e) => setFormData({ ...formData, delivered: e.target.checked })}
-                    />
-                  }
-                  label="Facture livrée"
-                />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={3}>
-              <Grid xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Services
-                </Typography>
-                {Array.isArray(formData.serviceIds) && formData.serviceIds.map((_, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid xs={12} md={4}>
-                        <FormControl fullWidth required error={!formData.serviceIds[index]}>
-                          <InputLabel>Service</InputLabel>
-                          <Select
-                            value={formData.serviceIds[index] || ''}
-                            onChange={(e) => handleServiceChange(index, 'serviceId', e.target.value)}
-                            label="Service"
-                          >
-                            {Array.isArray(services) && services.map((service) => (
-                              <MenuItem key={service.id} value={service.id}>
-                                {service.designation} - {service.prix} FCFA
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {!formData.serviceIds[index] && (
-                            <FormHelperText>Veuillez sélectionner un service</FormHelperText>
-                          )}
-                        </FormControl>
-                      </Grid>
-                      <Grid xs={12} md={4}>
-                        <TextField
-                          fullWidth
-                          type="number"
-                          label="Quantité"
-                          value={formData.quantites[index] || ''}
-                          onChange={(e) => handleServiceChange(index, 'quantite', parseInt(e.target.value) || 0)}
-                          required
-                        />
-                      </Grid>
-                      <Grid xs={12} md={3}>
-                        <TextField
-                          fullWidth
-                          type="number"
-                          label="Prix"
-                          value={formData.prixs[index] || ''}
-                          onChange={(e) => handleServiceChange(index, 'prix', parseFloat(e.target.value) || 0)}
-                          required
-                        />
-                      </Grid>
-                      <Grid xs={12} md={1}>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleRemoveService(index)}
-                          sx={{ mt: 1 }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                ))}
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddService}
-                  sx={{ mt: 2 }}
-                >
-                  Ajouter un service
-                </Button>
-              </Grid>
-
-              <Grid>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  label="Notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </Grid>
-
-              <Grid>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  size="large"
-                >
-                  Créer la facture
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        )}
+        </Snackbar>
       </Paper>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

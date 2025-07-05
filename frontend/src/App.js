@@ -1,20 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import '@fontsource/roboto';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Login';
 import { AuthProvider } from './components/Auth/AuthContext';
-import config from './config';
+import theme from './theme/theme';
 
 // Pages
+import Dashboard from './pages/Dashboard';
 import InvoiceList from './pages/InvoiceList';
 import AddInvoice from './pages/AddInvoice';
 import Receipt from './pages/Receipt';
 import Depense from './pages/Depense';
 import Service from './pages/Service';
+import Journal from './pages/Journal';
 
 // Composant pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -27,7 +29,7 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <ThemeProvider theme={createTheme(config.theme)}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <Router>
@@ -42,12 +44,14 @@ function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route index element={<Navigate to="/invoices" replace />} />
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="invoices" element={<InvoiceList />} />
                 <Route path="add-invoice" element={<AddInvoice />} />
                 <Route path="receipt" element={<Receipt />} />
                 <Route path="depense" element={<Depense />} />
                 <Route path="services" element={<Service />} />
+                <Route path="journal" element={<Journal />} />
               </Route>
             </Routes>
           </Box>

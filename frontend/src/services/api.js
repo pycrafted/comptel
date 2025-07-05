@@ -155,6 +155,29 @@ export const invoiceApi = {
   },
   getTotalsByStatus: (status) => api.get(`/invoices/totals/by-status/${status}`),
   getTotalsByCustomer: (customer) => api.get(`/invoices/totals/by-customer/${customer}`),
+  getJournal: async (date) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token trouvé:', token ? 'Oui' : 'Non');
+      
+      const headers = {
+        'Accept': 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      console.log('Headers de la requête:', headers);
+      
+      const response = await axios.get(`${config.apiUrl}/invoices/journal?date=${date}`, { headers });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du journal:', error);
+      throw error;
+    }
+  },
 };
 
 // Entrées
@@ -304,6 +327,17 @@ export const exitApi = {
       throw error;
     }
   },
+};
+
+// Dashboard
+export const dashboardApi = {
+  getStats: () => api.get('/dashboard/stats'),
+  getStatsByPeriod: (startDate, endDate) => {
+    validateDate(new Date(startDate));
+    validateDate(new Date(endDate));
+    return api.get('/dashboard/stats/period', { params: { startDate, endDate } });
+  },
+  getActivityData: () => api.get('/dashboard/activity'),
 };
 
 // Santé de l'application
