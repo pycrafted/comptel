@@ -37,4 +37,40 @@ public class JwtServiceTest {
         assertEquals(username, claims.getSubject());
         assertTrue(claims.getExpiration().after(new Date()));
     }
+
+    @Test
+    public void testValidateToken() {
+        // Arrange
+        String username = "testuser";
+        String token = jwtService.getToken(username);
+
+        // Act
+        boolean isValid = jwtService.validateToken(token);
+
+        // Assert
+        assertTrue(isValid);
+    }
+
+    @Test
+    public void testGetUsernameFromToken() {
+        // Arrange
+        String username = "testuser";
+        String token = jwtService.getToken(username);
+
+        // Act
+        String extractedUsername = jwtService.getUsernameFromToken(token);
+
+        // Assert
+        assertEquals(username, extractedUsername);
+    }
+
+    @Test
+    public void testInvalidToken() {
+        // Arrange
+        String invalidToken = "invalid.token.here";
+
+        // Act & Assert
+        assertFalse(jwtService.validateToken(invalidToken));
+        assertThrows(Exception.class, () -> jwtService.getUsernameFromToken(invalidToken));
+    }
 }

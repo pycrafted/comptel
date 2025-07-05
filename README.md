@@ -1,186 +1,106 @@
-# Comptel - Application de Gestion Comptable
+# Comptel - Application de Gestion de Blanchisserie
 
-Application web complète pour la gestion comptable avec backend Spring Boot et frontend React.
-
-## 🚀 Déploiement sur Render
-
-### Option 1: Déploiement Automatique avec render.yaml (Recommandé)
-
-1. **Forkez ou clonez ce repository**
-2. **Connectez-vous à Render** et créez un nouveau "Blueprint"
-3. **Sélectionnez votre repository** GitHub
-4. **Render détectera automatiquement** le fichier `render.yaml` et configurera tous les services
-
-### Option 2: Déploiement Manuel
-
-#### 1. Base de Données PostgreSQL
-
-1. Créez un nouveau service **PostgreSQL** sur Render
-2. Notez les informations de connexion (URL, username, password)
-
-#### 2. Backend Spring Boot
-
-1. Créez un nouveau service **Web Service**
-2. **Configuration:**
-   - **Environment**: Docker
-   - **Build Command**: (laissé vide, géré par Dockerfile)
-   - **Start Command**: (laissé vide, géré par Dockerfile)
-   - **Dockerfile Path**: `./backend/Dockerfile`
-   - **Docker Context**: `./backend`
-
-3. **Variables d'environnement:**
-   ```
-   SPRING_DATASOURCE_URL=<URL_DE_VOTRE_DB>
-   SPRING_DATASOURCE_USERNAME=<USERNAME_DE_VOTRE_DB>
-   SPRING_DATASOURCE_PASSWORD=<PASSWORD_DE_VOTRE_DB>
-   SPRING_JPA_HIBERNATE_DDL_AUTO=update
-   SPRING_JPA_SHOW_SQL=false
-   SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-   SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
-   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics
-   SERVER_PORT=8080
-   ```
-
-4. **Health Check Path**: `/actuator/health`
-
-#### 3. Frontend React
-
-1. Créez un nouveau service **Web Service**
-2. **Configuration:**
-   - **Environment**: Docker
-   - **Build Command**: (laissé vide, géré par Dockerfile)
-   - **Start Command**: (laissé vide, géré par Dockerfile)
-   - **Dockerfile Path**: `./frontend/Dockerfile`
-   - **Docker Context**: `./frontend`
-
-3. **Variables d'environnement:**
-   ```
-   REACT_APP_API_URL=https://<nom-de-votre-backend>.onrender.com
-   NODE_ENV=production
-   ```
-
-4. **Health Check Path**: `/`
-
-## 📁 Structure du Projet
-
-```
-comptel/
-├── backend/                 # Application Spring Boot
-│   ├── Dockerfile          # Configuration Docker pour le backend
-│   ├── src/
-│   └── pom.xml
-├── frontend/               # Application React
-│   ├── Dockerfile          # Configuration Docker pour le frontend
-│   ├── nginx.conf          # Configuration Nginx
-│   ├── src/
-│   └── package.json
-├── docker/                 # Configuration Docker Compose (développement)
-├── render.yaml             # Configuration Render (production)
-└── README.md
-```
-
-## 🔧 Configuration Avancée
-
-### Variables d'environnement Backend
-
-| Variable | Description | Valeur par défaut |
-|----------|-------------|-------------------|
-| `SPRING_DATASOURCE_URL` | URL de connexion à la base de données | `jdbc:postgresql://localhost:5432/comptel` |
-| `SPRING_DATASOURCE_USERNAME` | Nom d'utilisateur de la DB | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | Mot de passe de la DB | `postgres` |
-| `SPRING_JPA_HIBERNATE_DDL_AUTO` | Mode de création des tables | `update` |
-| `SPRING_JPA_SHOW_SQL` | Afficher les requêtes SQL | `false` |
-| `SERVER_PORT` | Port du serveur | `8080` |
-
-### Variables d'environnement Frontend
-
-| Variable | Description | Valeur par défaut |
-|----------|-------------|-------------------|
-| `REACT_APP_API_URL` | URL de l'API backend | `http://localhost:8080/api` |
-| `NODE_ENV` | Environnement Node.js | `production` |
+[![Tests](https://github.com/pycrafted/comptel/workflows/Tests/badge.svg)](https://github.com/pycrafted/comptel/actions/workflows/tests.yml)
+[![Security](https://github.com/pycrafted/comptel/workflows/Backend%20Security%20Scan%20(OWASP%20ZAP)/badge.svg)](https://github.com/pycrafted/comptel/actions/workflows/security-owasp-zap.yml)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-green.svg)](https://spring.io/projects/spring-boot)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## 🚀 Démarrage Rapide
 
-### Développement Local
+### Prérequis
+- Java 21
+- Node.js 18+
+- PostgreSQL 15+
+- Docker (optionnel)
 
+### Installation
 ```bash
-# Backend
+# Cloner le projet
+git clone https://github.com/pycrafted/comptel.git
+cd comptel
+
+# Installation automatique (Windows)
+.\scripts\setup.ps1
+
+# Ou installation manuelle
+cd backend && mvn clean install -DskipTests
+cd ../frontend && npm install
+```
+
+### Lancement
+```bash
+# Lancement automatique (Windows)
+.\scripts\start.ps1
+
+# Ou lancement manuel
+# Terminal 1 - Backend
+cd backend && mvn spring-boot:run
+
+# Terminal 2 - Frontend
+cd frontend && npm start
+```
+
+### Accès
+- **Frontend** : http://localhost:3000
+- **Backend** : http://localhost:8080
+- **Admin** : admin/admin
+
+## 🧪 Tests
+
+Le projet inclut une suite de tests complète :
+
+### Tests Backend
+```bash
 cd backend
-./mvnw spring-boot:run
+mvn test
+```
 
-# Frontend
+### Tests Frontend
+```bash
 cd frontend
-npm install
-npm start
+npm test
 ```
 
-### Production avec Docker
-
+### Tests d'Intégration
 ```bash
-# Build et démarrage complet
-docker-compose -f docker/docker-compose.yml up --build
+# Vérification de l'utilisateur admin
+.\scripts\verify-admin-user.ps1
 ```
 
-## 📊 Monitoring
+## 📊 Badges de Qualité
 
-- **Backend Health Check**: `https://<backend-url>/actuator/health`
-- **Frontend Health Check**: `https://<frontend-url>/health`
+Les badges ci-dessus montrent le statut en temps réel :
+- 🟢 **Tests** : Tous les tests passent
+- 🟢 **Security** : Scan de sécurité réussi
+- 🟢 **Build** : Compilation réussie
 
-## 🔒 Sécurité
+## 🏗️ Architecture
 
-- Les variables sensibles sont gérées via les variables d'environnement Render
-- Configuration CORS appropriée
-- Headers de sécurité configurés dans Nginx
+- **Backend** : Spring Boot 3 + JPA + PostgreSQL
+- **Frontend** : React 18 + Material-UI
+- **Tests** : JUnit 5 + Mockito + React Testing Library
+- **CI/CD** : GitHub Actions
 
-## 👤 Utilisateur par Défaut
+## 📝 Scripts Utiles
 
-Après le déploiement, un utilisateur administrateur est automatiquement créé :
+| Script | Description |
+|--------|-------------|
+| `setup.ps1` | Installation complète |
+| `start.ps1` | Lancement de l'application |
+| `verify-admin-user.ps1` | Vérification admin |
+| `docker-start.ps1` | Lancement avec Docker |
+| `reset-db.ps1` | Réinitialisation base |
 
-- **Username**: `admin`
-- **Password**: `admin`
-- **Rôle**: Administrateur
+## 🤝 Contribution
 
-⚠️ **IMPORTANT**: Changez ce mot de passe après votre première connexion !
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit les changements (`git commit -m 'Add AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
 
-### Vérification de l'utilisateur admin
+## 📄 Licence
 
-Après le déploiement, vous pouvez vérifier que l'utilisateur admin fonctionne :
-
-```bash
-# Linux/Mac
-./scripts/verify-admin-user.sh https://comptel-backend.onrender.com
-
-# Windows PowerShell
-.\scripts\verify-admin-user.ps1 https://comptel-backend.onrender.com
-```
-
-## 📝 Notes Importantes
-
-1. **Base de données**: Assurez-vous que votre base PostgreSQL est créée avant le déploiement du backend
-2. **URLs**: Mettez à jour `REACT_APP_API_URL` avec l'URL réelle de votre backend après déploiement
-3. **SSL**: Render fournit automatiquement des certificats SSL
-4. **Scaling**: Les services peuvent être mis à l'échelle selon vos besoins
-5. **Sécurité**: L'utilisateur admin/admin est créé automatiquement - changez le mot de passe !
-
-## 🆘 Support et Dépannage
-
-### Problèmes Courants
-
-#### Erreur "failed to read dockerfile"
-Si vous obtenez cette erreur lors du déploiement :
-1. Vérifiez que tous les fichiers sont commités sur GitHub
-2. Utilisez le déploiement manuel (voir guide de dépannage)
-3. Consultez [docs/render-troubleshooting.md](docs/render-troubleshooting.md)
-
-#### Vérification de l'Utilisateur Admin
-```bash
-# Testez la connexion admin/admin
-./scripts/verify-admin-user.sh https://comptel-backend.onrender.com
-```
-
-### Support Général
-En cas de problème:
-1. Vérifiez les logs dans le dashboard Render
-2. Assurez-vous que tous les services sont démarrés
-3. Vérifiez la connectivité entre les services
-4. Consultez la documentation de dépannage
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails. 

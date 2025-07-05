@@ -2,7 +2,8 @@ Write-Host "Configuration initiale de Comptel..." -ForegroundColor Cyan
 
 # Vérifier les prérequis
 Write-Host "[1/4] Vérification des prérequis..." -ForegroundColor Yellow
-& .\scripts\check-prereqs.ps1
+$checkPrereqsPath = Join-Path $PSScriptRoot "check-prereqs.ps1"
+& $checkPrereqsPath
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Échec de la vérification des prérequis. Corrigez les erreurs ci-dessus puis relancez ce script." -ForegroundColor Red
     exit 1
@@ -25,42 +26,32 @@ if (-not (Test-Path ".git")) {
 }
 
 # Mettre à jour les branches
-Write-Host "[3/4] Mise à jour des branches..." -ForegroundColor Yellow
-$branches = @("feature/authentification-backend", "feature/authentification-frontend", "feature/authentification")
-foreach ($branch in $branches) {
-    git checkout $branch
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Échec du checkout de la branche $branch. Vérifiez que la branche existe." -ForegroundColor Red
-        exit 1
-    }
-    git pull origin $branch
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Échec du pull sur la branche $branch. Vérifiez votre connexion et vos droits." -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "Branche $branch à jour." -ForegroundColor Green
-}
+Write-Host "[3/4] Vérification de la branche courante..." -ForegroundColor Yellow
+$currentBranch = git rev-parse --abbrev-ref HEAD
+Write-Host "Branche courante : $currentBranch" -ForegroundColor Green
 
 # Installer les dépendances backend
 Write-Host "[4/4] Installation des dépendances backend..." -ForegroundColor Yellow
-Set-Location backend
-.\mvnw clean install
+$backendPath = (Get-Item (Join-Path $PSScriptRoot "..\backend")).FullName
+Set-Location $backendPath
+& "mvn" clean install -DskipTests
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Échec de l'installation des dépendances backend. Vérifiez les logs Maven ci-dessus." -ForegroundColor Red
     exit 1
 }
-Set-Location ..
+Set-Location $PSScriptRoot
 Write-Host "Dépendances backend installées avec succès." -ForegroundColor Green
 
 # Installer les dépendances frontend
 Write-Host "Installation des dépendances frontend..." -ForegroundColor Yellow
-Set-Location frontend
+$frontendPath = (Get-Item (Join-Path $PSScriptRoot "..\frontend")).FullName
+Set-Location $frontendPath
 npm install
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Échec de l'installation des dépendances frontend. Vérifiez les logs npm ci-dessus." -ForegroundColor Red
     exit 1
 }
-Set-Location ..
+Set-Location $PSScriptRoot
 Write-Host "Dépendances frontend installées avec succès." -ForegroundColor Green
 
 Write-Host "\nConfiguration terminée ! Utilisez start.ps1 pour lancer." -ForegroundColor Cyan

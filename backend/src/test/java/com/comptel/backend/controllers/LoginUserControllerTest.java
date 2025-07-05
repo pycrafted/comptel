@@ -2,6 +2,8 @@ package com.comptel.backend.controllers;
 
 import com.comptel.backend.domain.AccountCredentials;
 import com.comptel.backend.services.JwtService;
+import com.comptel.backend.services.UseImpl;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -40,6 +42,12 @@ public class LoginUserControllerTest {
     @Mock
     private Authentication authentication;
 
+    @Mock
+    private UseImpl userService;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -55,6 +63,16 @@ public class LoginUserControllerTest {
                 .thenReturn(authentication);
         when(authentication.getName()).thenReturn("testuser");
         when(jwtService.getToken("testuser")).thenReturn(token);
+        
+        // Mock userService methods
+        org.springframework.security.core.userdetails.UserDetails userDetails = 
+            org.springframework.security.core.userdetails.User.builder()
+                .username("testuser")
+                .password("password")
+                .authorities("USER")
+                .build();
+        when(userService.loadUserByUsername("testuser")).thenReturn(userDetails);
+        when(userService.getUserIdByUsername("testuser")).thenReturn(1L);
 
         // Act
         ResponseEntity<?> response = loginUserController.getToken(credentials);
