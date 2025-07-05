@@ -22,17 +22,14 @@ services:
         fromDatabase:
           name: comptel-db
           property: connectionString
-        sync: false
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: comptel-db
           property: user
-        sync: false
       - key: SPRING_DATASOURCE_PASSWORD
         fromDatabase:
           name: comptel-db
           property: password
-        sync: false
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
         value: update
       - key: SPRING_JPA_SHOW_SQL
