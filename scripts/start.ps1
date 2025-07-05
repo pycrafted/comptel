@@ -28,27 +28,27 @@ $attempt = 0
 do {
     $attempt++
     Write-Host "Tentative $attempt/$maxAttempts de vérification du backend..." -ForegroundColor Yellow
-    try {
+try {
         $tcp = Test-NetConnection -ComputerName localhost -Port 8080 -InformationLevel Quiet
         if ($tcp) {
-            Write-Host "Backend lancé sur http://localhost:8080" -ForegroundColor Green
+        Write-Host "Backend lancé sur http://localhost:8080" -ForegroundColor Green
             break
         } else {
             if ($attempt -lt $maxAttempts) {
                 Write-Host "Backend pas encore prêt, nouvelle tentative dans 3 secondes..." -ForegroundColor Yellow
                 Start-Sleep -Seconds 3
-            } else {
+    } else {
                 Write-Host "Le backend ne répond pas sur le port 8080 après $maxAttempts tentatives." -ForegroundColor Red
             }
-        }
-    } catch {
+    }
+} catch {
         if ($attempt -lt $maxAttempts) {
             Write-Host "Erreur de connexion, nouvelle tentative dans 3 secondes..." -ForegroundColor Yellow
             Start-Sleep -Seconds 3
         } else {
             Write-Host "Impossible de vérifier le port 8080 après $maxAttempts tentatives." -ForegroundColor Red
         }
-    }
+}
 } while ($attempt -lt $maxAttempts -and -not $tcp)
 
 # Lancer le frontend
