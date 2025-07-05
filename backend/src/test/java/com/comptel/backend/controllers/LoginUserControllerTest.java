@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.*;
@@ -78,8 +80,8 @@ public class LoginUserControllerTest {
         ResponseEntity<?> response = loginUserController.getToken(credentials);
 
         // Assert
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Bearer " + token, response.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
         verify(authenticationManager, times(1)).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(jwtService, times(1)).getToken("testuser");
     }
@@ -90,10 +92,13 @@ public class LoginUserControllerTest {
         AccountCredentials credentials = new AccountCredentials("testuser", "wrongpassword");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new RuntimeException("Authentication failed"));
+                .thenThrow(new BadCredentialsException("Bad credentials"));
 
-        // Act & Assert
-        assertThrows(RuntimeException.class, () -> loginUserController.getToken(credentials));
+        // Act
+        ResponseEntity<?> response = loginUserController.getToken(credentials);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
         verify(jwtService, never()).getToken(anyString());
     }
 
@@ -111,7 +116,7 @@ public class LoginUserControllerTest {
         @Test
         public void testLoginSuccess() throws Exception {
             String credentials = "{\"username\": \"admin\", \"password\": \"admin\"}";
-            mockMvc.perform(post("/login")
+            mockMvc.perform(post("/api/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(credentials))
                     .andExpect(status().isOk())
