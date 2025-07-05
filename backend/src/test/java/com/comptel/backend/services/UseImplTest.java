@@ -4,92 +4,168 @@ import com.comptel.backend.entity.User;
 import com.comptel.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
 public class UseImplTest {
-
-    @Mock
-    private UserRepository userRepository;
 
     @InjectMocks
     private UseImpl useImpl;
 
-    private User testUser;
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private User mockUser;
 
     @BeforeEach
     public void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setUsername("testuser");
-        testUser.setPassword("password");
-        testUser.setRole(true); // ADMIN
+        MockitoAnnotations.openMocks(this);
+        
+        // Setup mock user
+        when(mockUser.getId()).thenReturn(1L);
+        when(mockUser.getUsername()).thenReturn("testuser");
+        when(mockUser.getPassword()).thenReturn("hashedpassword");
+        when(mockUser.isRole()).thenReturn(false);
     }
 
     @Test
-    public void testLoadUserByUsername_Success() {
+    public void testLoadUserByUsername_Success_UserRole() {
         // Arrange
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        String username = "testuser";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(mockUser));
 
         // Act
-        UserDetails userDetails = useImpl.loadUserByUsername("testuser");
+        UserDetails result = useImpl.loadUserByUsername(username);
 
         // Assert
-        assertNotNull(userDetails);
-        assertEquals("testuser", userDetails.getUsername());
-        assertEquals("password", userDetails.getPassword());
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
+        assertNotNull(result);
+        assertEquals(username, result.getUsername());
+        assertEquals("hashedpassword", result.getPassword());
+        assertTrue(result.getAuthorities().stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
+        verify(userRepository, times(1)).findByUsername(username);
+    }
 
-        verify(userRepository, times(1)).findByUsername("testuser");
+    @Test
+    public void testLoadUserByUsername_Success_AdminRole() {
+        // Arrange
+        String username = "adminuser";
+        when(mockUser.getUsername()).thenReturn("adminuser");
+        when(mockUser.isRole()).thenReturn(true);
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(mockUser));
+
+        // Act
+        UserDetails result = useImpl.loadUserByUsername(username);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(username, result.getUsername());
+        assertTrue(result.getAuthorities().stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
+        verify(userRepository, times(1)).findByUsername(username);
     }
 
     @Test
     public void testLoadUserByUsername_UserNotFound() {
         // Arrange
-        when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
+        String username = "nonexistentuser";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(UsernameNotFoundException.class, () -> {
-            useImpl.loadUserByUsername("nonexistent");
+        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
+            useImpl.loadUserByUsername(username);
         });
 
-        verify(userRepository, times(1)).findByUsername("nonexistent");
+        assertEquals("Utilisateur non trouvé: " + username, exception.getMessage());
+        verify(userRepository, times(1)).findByUsername(username);
     }
 
     @Test
     public void testGetUserIdByUsername_Success() {
         // Arrange
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        String username = "testuser";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(mockUser));
 
         // Act
-        Long userId = useImpl.getUserIdByUsername("testuser");
+        Long result = useImpl.getUserIdByUsername(username);
 
         // Assert
-        assertEquals(1L, userId);
-        verify(userRepository, times(1)).findByUsername("testuser");
+        assertEquals(1L, result);
+        verify(userRepository, times(1)).findByUsername(username);
     }
 
     @Test
     public void testGetUserIdByUsername_UserNotFound() {
         // Arrange
-        when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
+        String username = "nonexistentuser";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(UsernameNotFoundException.class, () -> {
-            useImpl.getUserIdByUsername("nonexistent");
+        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
+            useImpl.getUserIdByUsername(username);
         });
 
-        verify(userRepository, times(1)).findByUsername("nonexistent");
+        assertEquals("Utilisateur non trouvé: " + username, exception.getMessage());
+        verify(userRepository, times(1)).findByUsername(username);
+    }
+
+    @Test
+    public void testLoadUserByUsername_WithDifferentUserData() {
+        // Arrange
+        String username = "anotheruser";
+        User anotherUser = new User();
+        anotherUser.setId(2L);
+        anotherUser.setUsername("anotheruser");
+        anotherUser.setPassword("anotherpassword");
+        anotherUser.setRole(true);
+        
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(anotherUser));
+
+        // Act
+        UserDetails result = useImpl.loadUserByUsername(username);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(username, result.getUsername());
+        assertEquals("anotherpassword", result.getPassword());
+        assertTrue(result.getAuthorities().stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
+        verify(userRepository, times(1)).findByUsername(username);
+    }
+
+    @Test
+    public void testLoadUserByUsername_EmptyUsername() {
+        // Arrange
+        String username = "";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
+            useImpl.loadUserByUsername(username);
+        });
+
+        assertEquals("Utilisateur non trouvé: " + username, exception.getMessage());
+        verify(userRepository, times(1)).findByUsername(username);
+    }
+
+    @Test
+    public void testGetUserIdByUsername_EmptyUsername() {
+        // Arrange
+        String username = "";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
+            useImpl.getUserIdByUsername(username);
+        });
+
+        assertEquals("Utilisateur non trouvé: " + username, exception.getMessage());
+        verify(userRepository, times(1)).findByUsername(username);
     }
 } 

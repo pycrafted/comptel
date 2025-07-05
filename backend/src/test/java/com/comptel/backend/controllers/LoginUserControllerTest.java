@@ -23,12 +23,12 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.startsWith;
 
 // Tests unitaires avec Mockito
@@ -104,6 +104,137 @@ public class LoginUserControllerTest {
         verify(jwtService, never()).getToken(anyString());
     }
 
+    @Test
+    public void testGetToken_NullCredentials() {
+        // Arrange
+        AccountCredentials credentials = new AccountCredentials(null, null);
+
+        // Act
+        ResponseEntity<?> response = loginUserController.getToken(credentials);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
+        assertTrue(response.getBody().toString().contains("Identifiants invalides"));
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    public void testGetToken_NullUsername() {
+        // Arrange
+        AccountCredentials credentials = new AccountCredentials(null, "password");
+
+        // Act
+        ResponseEntity<?> response = loginUserController.getToken(credentials);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
+        assertTrue(response.getBody().toString().contains("Identifiants invalides"));
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    public void testGetToken_NullPassword() {
+        // Arrange
+        AccountCredentials credentials = new AccountCredentials("testuser", null);
+
+        // Act
+        ResponseEntity<?> response = loginUserController.getToken(credentials);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
+        assertTrue(response.getBody().toString().contains("Identifiants invalides"));
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    public void testGetToken_GeneralException() {
+        // Arrange
+        AccountCredentials credentials = new AccountCredentials("testuser", "password");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new RuntimeException("Database error"));
+
+        // Act
+        ResponseEntity<?> response = loginUserController.getToken(credentials);
+
+        // Assert
+        assertEquals(500, response.getStatusCode().value());
+        assertTrue(response.getBody().toString().contains("Erreur serveur"));
+        verify(jwtService, never()).getToken(anyString());
+    }
+
+    @Test
+    public void testVerifyToken_ValidToken() {
+        // Arrange
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer valid-token");
+        
+        when(jwtService.validateToken("valid-token")).thenReturn(true);
+        when(jwtService.getUsernameFromToken("valid-token")).thenReturn("testuser");
+        
+        org.springframework.security.core.userdetails.UserDetails userDetails = 
+            org.springframework.security.core.userdetails.User.builder()
+                .username("testuser")
+                .password("password")
+                .authorities("USER")
+                .build();
+        when(userService.loadUserByUsername("testuser")).thenReturn(userDetails);
+        when(userService.getUserIdByUsername("testuser")).thenReturn(1L);
+
+        // Act
+        ResponseEntity<?> response = loginUserController.verifyToken(request);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        verify(jwtService, times(1)).validateToken("valid-token");
+        verify(jwtService, times(1)).getUsernameFromToken("valid-token");
+    }
+
+    @Test
+    public void testVerifyToken_InvalidToken() {
+        // Arrange
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer invalid-token");
+        
+        when(jwtService.validateToken("invalid-token")).thenReturn(false);
+
+        // Act
+        ResponseEntity<?> response = loginUserController.verifyToken(request);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
+        verify(jwtService, times(1)).validateToken("invalid-token");
+        verify(jwtService, never()).getUsernameFromToken(anyString());
+    }
+
+    @Test
+    public void testVerifyToken_NoToken() {
+        // Arrange
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        // Act
+        ResponseEntity<?> response = loginUserController.verifyToken(request);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
+        verify(jwtService, never()).validateToken(anyString());
+    }
+
+    @Test
+    public void testVerifyToken_NoBearerPrefix() {
+        // Arrange
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(HttpHeaders.AUTHORIZATION, "valid-token");
+
+        // Act
+        ResponseEntity<?> response = loginUserController.verifyToken(request);
+
+        // Assert
+        assertEquals(401, response.getStatusCode().value());
+        verify(jwtService, never()).validateToken(anyString());
+    }
+
     // Test d'intégration avec MockMvc
     @SpringBootTest
     @AutoConfigureMockMvc
@@ -131,8 +262,24 @@ public class LoginUserControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(credentials))
                     .andExpect(status().isOk())
-                    .andExpect(header().exists("Authorization"))
-                    .andExpect(header().string("Authorization", startsWith("Bearer ")));
+                    .andExpect(jsonPath("$.token").exists())
+                    .andExpect(jsonPath("$.username").value("admin"));
+        }
+
+        @Test
+        public void testLoginFailure() throws Exception {
+            String credentials = "{\"username\": \"admin\", \"password\": \"wrongpassword\"}";
+            mockMvc.perform(post("/api/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(credentials))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        public void testVerifyTokenEndpoint() throws Exception {
+            mockMvc.perform(get("/api/verify-token")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
+                    .andExpect(status().isUnauthorized());
         }
     }
 }

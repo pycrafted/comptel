@@ -54,7 +54,7 @@ public class AuthentificationFilter extends OncePerRequestFilter {
         
         if (token != null && token.startsWith("Bearer ")) {
             String username = jwtService.getAuthUser(request);
-            if (username != null) {
+            if (username != null && !username.trim().isEmpty()) {
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                     username,
                     null,
