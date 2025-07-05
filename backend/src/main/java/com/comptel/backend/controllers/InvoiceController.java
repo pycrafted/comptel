@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -355,9 +356,20 @@ public class InvoiceController {
      * @return Liste de Long extraite.
      */
     private List<Long> extractLongList(Map<String, Object> request, String key) {
-        @SuppressWarnings("unchecked")
-        List<Integer> list = (List<Integer>) request.get(key);
-        return list.stream().map(Integer::longValue).collect(Collectors.toList());
+        List<?> rawList = (List<?>) request.get(key);
+        List<Long> result = new ArrayList<>();
+        for (Object o : rawList) {
+            if (o instanceof Integer) {
+                result.add(((Integer) o).longValue());
+            } else if (o instanceof Long) {
+                result.add((Long) o);
+            } else if (o instanceof String) {
+                result.add(Long.parseLong((String) o));
+            } else {
+                throw new IllegalArgumentException("Type inattendu dans la liste : " + o.getClass());
+            }
+        }
+        return result;
     }
 
     /**

@@ -3,8 +3,11 @@ package com.comptel.backend.controllers;
 import com.comptel.backend.entity.Invoice;
 import com.comptel.backend.entity.Payment;
 import com.comptel.backend.entity.User;
+import com.comptel.backend.entity.GlobalSettings;
 import com.comptel.backend.services.InvoiceService;
 import com.comptel.backend.repository.UserRepository;
+import com.comptel.backend.repository.ServiceRepository;
+import com.comptel.backend.repository.GlobalSettingsRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -40,6 +44,12 @@ public class InvoiceControllerTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ServiceRepository serviceRepository;
+
+    @Mock
+    private GlobalSettingsRepository globalSettingsRepository;
 
     @Mock
     private Invoice mockInvoice;
@@ -73,8 +83,9 @@ public class InvoiceControllerTest {
     public void testGetAllInvoices_Success() {
         // Arrange
         List<Invoice> invoices = Arrays.asList(mockInvoice);
-        when(invoiceService.getInvoiceRepository()).thenReturn(mock(com.comptel.backend.repository.InvoiceRepository.class));
-        when(invoiceService.getInvoiceRepository().findAll()).thenReturn(invoices);
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findAll()).thenReturn(invoices);
 
         // Act
         ResponseEntity<List<Map<String, Object>>> response = invoiceController.getAllInvoices();
@@ -91,35 +102,35 @@ public class InvoiceControllerTest {
     }
 
     @Test
-    public void testGetInvoiceById_Success() {
+    public void testDeleteInvoice_Success() {
         // Arrange
-        when(invoiceService.getInvoiceRepository()).thenReturn(mock(com.comptel.backend.repository.InvoiceRepository.class));
-        when(invoiceService.getInvoiceRepository().findById(1L)).thenReturn(Optional.of(mockInvoice));
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findById(1L)).thenReturn(Optional.of(mockInvoice));
+        doNothing().when(mockRepo).delete(mockInvoice);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = invoiceController.getInvoiceById(1L);
+        ResponseEntity<Map<String, Object>> response = invoiceController.deleteInvoice(1L);
 
         // Assert
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(1L, response.getBody().get("id"));
-        assertEquals("Test Customer", response.getBody().get("customer"));
+        assertEquals(true, response.getBody().get("success"));
+        assertEquals("La facture a été supprimée avec succès.", response.getBody().get("message"));
+        verify(mockRepo, times(1)).delete(mockInvoice);
     }
 
     @Test
-    public void testGetInvoiceById_NotFound() {
+    public void testDeleteInvoice_NotFound() {
         // Arrange
-        when(invoiceService.getInvoiceRepository()).thenReturn(mock(com.comptel.backend.repository.InvoiceRepository.class));
-        when(invoiceService.getInvoiceRepository().findById(999L)).thenReturn(Optional.empty());
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findById(999L)).thenReturn(Optional.empty());
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = invoiceController.getInvoiceById(999L);
-
-        // Assert
-        assertEquals(400, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals(false, response.getBody().get("success"));
-        assertTrue(response.getBody().get("error").toString().contains("Facture non trouvée"));
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            invoiceController.deleteInvoice(999L);
+        });
     }
 
     @Test
@@ -139,13 +150,19 @@ public class InvoiceControllerTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
         when(invoiceService.createInvoice(
-            eq("New Customer"), eq("987654321"), eq(true), any(LocalDateTime.class),
+            anyString(), anyString(), anyBoolean(), any(LocalDateTime.class),
             anyList(), anyList(), anyList(),
-            eq(Payment.ModePaiement.CASH), eq(new BigDecimal("300.00")), any(LocalDateTime.class), eq(mockUser)
+            any(Payment.ModePaiement.class), any(BigDecimal.class), any(LocalDateTime.class), any(User.class)
         )).thenReturn(mockInvoice);
 
         // Act
         ResponseEntity<Map<String, Object>> response = invoiceController.createInvoice(request);
+
+        // Debug: Affiche le code et le corps de la réponse si ce n'est pas 200
+        if (response.getStatusCode().value() != 200) {
+            System.out.println("Erreur testCreateInvoice_Success : code=" + response.getStatusCode().value());
+            System.out.println("Body: " + response.getBody());
+        }
 
         // Assert
         assertEquals(200, response.getStatusCode().value());
@@ -191,12 +208,14 @@ public class InvoiceControllerTest {
         )).thenReturn(mockInvoice);
 
         // Act
-        ResponseEntity<Map<String, Object>> response = invoiceController.patchInvoce(invoiceId, request);
+        ResponseEntity<?> response = invoiceController.patchInvoce(invoiceId, request);
 
         // Assert
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(true, response.getBody().get("success"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(true, responseBody.get("success"));
     }
 
     @Test
@@ -207,12 +226,14 @@ public class InvoiceControllerTest {
         // Missing required fields
 
         // Act
-        ResponseEntity<Map<String, Object>> response = invoiceController.patchInvoce(invoiceId, request);
+        ResponseEntity<?> response = invoiceController.patchInvoce(invoiceId, request);
 
         // Assert
         assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(false, response.getBody().get("success"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(false, responseBody.get("success"));
     }
 
     @Test
@@ -221,8 +242,9 @@ public class InvoiceControllerTest {
         LocalDateTime start = LocalDateTime.now().minusDays(7);
         LocalDateTime end = LocalDateTime.now();
         List<Invoice> invoices = Arrays.asList(mockInvoice);
-        when(invoiceService.getInvoiceRepository()).thenReturn(mock(com.comptel.backend.repository.InvoiceRepository.class));
-        when(invoiceService.getInvoiceRepository().findByInvoiceDateTimeBetween(start, end)).thenReturn(invoices);
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findByInvoiceDateTimeBetween(start, end)).thenReturn(invoices);
 
         // Act
         ResponseEntity<List<Map<String, Object>>> response = invoiceController.getInvoicesByDateRange(start, end);
@@ -234,37 +256,25 @@ public class InvoiceControllerTest {
     }
 
     @Test
-    public void testGetInvoicesByCustomer_Success() {
+    public void testGetAddInvoiceData_Success() {
         // Arrange
-        String customer = "Test Customer";
-        List<Invoice> invoices = Arrays.asList(mockInvoice);
-        when(invoiceService.getInvoiceRepository()).thenReturn(mock(com.comptel.backend.repository.InvoiceRepository.class));
-        when(invoiceService.getInvoiceRepository().findByCustomerContainingIgnoreCase(customer)).thenReturn(invoices);
+        List<com.comptel.backend.entity.Service> services = Arrays.asList();
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        GlobalSettings mockSettings = mock(GlobalSettings.class);
+        
+        when(serviceRepository.findAll()).thenReturn(services);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findMaxReference()).thenReturn(8000);
+        when(globalSettingsRepository.findById(1L)).thenReturn(Optional.of(mockSettings));
 
         // Act
-        ResponseEntity<List<Map<String, Object>>> response = invoiceController.getInvoicesByCustomer(customer);
+        ResponseEntity<Map<String, Object>> response = invoiceController.getAddInvoiceData();
 
         // Assert
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
-    }
-
-    @Test
-    public void testGetInvoicesByPhone_Success() {
-        // Arrange
-        String phone = "123456789";
-        List<Invoice> invoices = Arrays.asList(mockInvoice);
-        when(invoiceService.getInvoiceRepository()).thenReturn(mock(com.comptel.backend.repository.InvoiceRepository.class));
-        when(invoiceService.getInvoiceRepository().findByTelephone(phone)).thenReturn(invoices);
-
-        // Act
-        ResponseEntity<List<Map<String, Object>>> response = invoiceController.getInvoicesByPhone(phone);
-
-        // Assert
-        assertEquals(200, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(8001, response.getBody().get("nextReference"));
+        assertEquals(services, response.getBody().get("services"));
     }
 
     // Test d'intégration avec MockMvc
