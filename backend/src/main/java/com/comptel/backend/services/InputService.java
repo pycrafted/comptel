@@ -91,7 +91,7 @@ public class InputService {
         Input input = new Input();
         input.setTitres(titres);
         input.setMontants(montants);
-        input.setModePaiement(Input.ModePaiement.valueOf(modePaiement.toUpperCase()));
+        input.setModePaiement(Input.ModePaiement.valueOf(modePaiement.toLowerCase()));
         input.setCreatedAts(LocalDateTime.now());
 
         Optional<User> user = userRepository.findById(userId);
@@ -109,7 +109,7 @@ public class InputService {
 
         input.setTitres(titres);
         input.setMontants(montants);
-        input.setModePaiement(Input.ModePaiement.valueOf(modePaiement.toUpperCase()));
+        input.setModePaiement(Input.ModePaiement.valueOf(modePaiement.toLowerCase()));
 
         return inputRepository.save(input);
     }

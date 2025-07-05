@@ -37,6 +37,9 @@ public class InputControllerTest {
     private InputService inputService;
 
     @Mock
+    private com.comptel.backend.repository.InputRepository mockInputRepository;
+
+    @Mock
     private Input mockInput;
 
     @Mock
@@ -54,7 +57,7 @@ public class InputControllerTest {
         when(mockInput.getId()).thenReturn(1L);
         when(mockInput.getTitres()).thenReturn("Test Input");
         when(mockInput.getMontants()).thenReturn(new BigDecimal("500.00"));
-        when(mockInput.getModePaiement()).thenReturn(Input.ModePaiement.CASH);
+        when(mockInput.getModePaiement()).thenReturn(Input.ModePaiement.cash);
         when(mockInput.getCreatedAts()).thenReturn(LocalDateTime.now());
         when(mockInput.getSaveBy()).thenReturn(mockUser);
     }
@@ -63,7 +66,8 @@ public class InputControllerTest {
     public void testGetAllInputs_Success() {
         // Arrange
         List<Input> inputs = Arrays.asList(mockInput);
-        when(inputService.getInputRepository().findAll()).thenReturn(inputs);
+        when(inputService.getInputRepository()).thenReturn(mockInputRepository);
+        when(mockInputRepository.findAll()).thenReturn(inputs);
 
         // Act
         ResponseEntity<List<Map<String, Object>>> response = inputController.getAllInputs();
@@ -77,7 +81,7 @@ public class InputControllerTest {
         assertEquals(1L, inputData.get("id"));
         assertEquals("Test Input", inputData.get("titres"));
         assertEquals(new BigDecimal("500.00"), inputData.get("montants"));
-        assertEquals("CASH", inputData.get("modePaiement"));
+        assertEquals("cash", inputData.get("modePaiement"));
     }
 
     @Test
@@ -131,10 +135,10 @@ public class InputControllerTest {
     public void testGetInputsByMode_Success() {
         // Arrange
         List<Input> inputs = Arrays.asList(mockInput);
-        when(inputService.findByModePaiement(Input.ModePaiement.CASH)).thenReturn(inputs);
+        when(inputService.findByModePaiement(Input.ModePaiement.cash)).thenReturn(inputs);
 
         // Act
-        ResponseEntity<List<Map<String, Object>>> response = inputController.getInputsByMode(Input.ModePaiement.CASH);
+        ResponseEntity<List<Map<String, Object>>> response = inputController.getInputsByMode(Input.ModePaiement.cash);
 
         // Assert
         assertEquals(200, response.getStatusCode().value());
@@ -148,17 +152,17 @@ public class InputControllerTest {
         Map<String, Object> request = new HashMap<>();
         request.put("titres", "New Input");
         request.put("montants", new BigDecimal("750.00"));
-        request.put("modePaiement", "CASH");
+        request.put("modePaiement", "cash");
         request.put("saveBy", 1L);
 
         Input newInput = new Input();
         newInput.setId(2L);
         newInput.setTitres("New Input");
         newInput.setMontants(new BigDecimal("750.00"));
-        newInput.setModePaiement(Input.ModePaiement.CASH);
+        newInput.setModePaiement(Input.ModePaiement.cash);
         newInput.setSaveBy(mockUser);
 
-        when(inputService.createInput("New Input", new BigDecimal("750.00"), "CASH", 1L))
+        when(inputService.createInput("New Input", new BigDecimal("750.00"), "cash", 1L))
                 .thenReturn(newInput);
 
         // Act
@@ -181,15 +185,15 @@ public class InputControllerTest {
         Map<String, Object> request = new HashMap<>();
         request.put("titres", "Updated Input");
         request.put("montants", new BigDecimal("1000.00"));
-        request.put("modePaiement", "CARD");
+        request.put("modePaiement", "om");
 
         Input updatedInput = new Input();
         updatedInput.setId(1L);
         updatedInput.setTitres("Updated Input");
         updatedInput.setMontants(new BigDecimal("1000.00"));
-        updatedInput.setModePaiement(Input.ModePaiement.CARD);
+        updatedInput.setModePaiement(Input.ModePaiement.om);
 
-        when(inputService.updateInput(1L, "Updated Input", new BigDecimal("1000.00"), "CARD"))
+        when(inputService.updateInput(1L, "Updated Input", new BigDecimal("1000.00"), "om"))
                 .thenReturn(updatedInput);
 
         // Act
@@ -235,7 +239,7 @@ public class InputControllerTest {
         
         @SuppressWarnings("unchecked")
         Map<String, String> byMode = (Map<String, String>) response.getBody().get("byMode");
-        assertEquals("500.00", byMode.get("CASH"));
+        assertEquals("500.00", byMode.get("cash"));
     }
 
     // Test d'intégration avec MockMvc
@@ -270,7 +274,7 @@ public class InputControllerTest {
             Map<String, Object> inputData = new HashMap<>();
             inputData.put("titres", "Integration Test Input");
             inputData.put("montants", 300.00);
-            inputData.put("modePaiement", "CASH");
+            inputData.put("modePaiement", "cash");
             inputData.put("saveBy", 1L);
 
             mockMvc.perform(post("/api/inputs")

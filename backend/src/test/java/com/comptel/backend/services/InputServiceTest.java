@@ -59,7 +59,7 @@ public class InputServiceTest {
         when(mockInput.getId()).thenReturn(1L);
         when(mockInput.getTitres()).thenReturn("Test Input");
         when(mockInput.getMontants()).thenReturn(new BigDecimal("500.00"));
-        when(mockInput.getModePaiement()).thenReturn(Input.ModePaiement.CASH);
+        when(mockInput.getModePaiement()).thenReturn(Input.ModePaiement.cash);
         when(mockInput.getCreatedAts()).thenReturn(LocalDateTime.now());
         when(mockInput.getSaveBy()).thenReturn(mockUser);
     }
@@ -69,26 +69,26 @@ public class InputServiceTest {
         // Arrange
         String titres = "New Input";
         BigDecimal montants = new BigDecimal("750.00");
-        String modePaiement = "CASH";
+        String modePaiement = "cash";
         Long userId = 1L;
 
         Input newInput = new Input();
         newInput.setTitres(titres);
         newInput.setMontants(montants);
-        newInput.setModePaiement(Input.ModePaiement.CASH);
+        newInput.setModePaiement(Input.ModePaiement.cash);
         newInput.setSaveBy(mockUser);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
         when(inputRepository.save(any(Input.class))).thenReturn(newInput);
 
         // Act
-        Input result = inputService.createInput(titres, montants, modePaiement, userId);
+        Input result = inputService.createInput(titres, montants, "cash", userId);
 
         // Assert
         assertNotNull(result);
         assertEquals(titres, result.getTitres());
         assertEquals(montants, result.getMontants());
-        assertEquals(Input.ModePaiement.CASH, result.getModePaiement());
+        assertEquals(Input.ModePaiement.cash, result.getModePaiement());
         assertEquals(mockUser, result.getSaveBy());
         verify(inputRepository, times(1)).save(any(Input.class));
     }
@@ -98,7 +98,7 @@ public class InputServiceTest {
         // Arrange
         String titres = "New Input";
         BigDecimal montants = new BigDecimal("-100.00"); // Invalid negative amount
-        String modePaiement = "CASH";
+        String modePaiement = "cash";
         Long userId = 1L;
 
         // Act & Assert
@@ -113,32 +113,32 @@ public class InputServiceTest {
         Long id = 1L;
         String titres = "Updated Input";
         BigDecimal montants = new BigDecimal("1000.00");
-        String modePaiement = "CARD";
+        String modePaiement = "om";
 
         Input existingInput = new Input();
         existingInput.setId(id);
         existingInput.setTitres("Old Input");
         existingInput.setMontants(new BigDecimal("500.00"));
-        existingInput.setModePaiement(Input.ModePaiement.CASH);
+        existingInput.setModePaiement(Input.ModePaiement.cash);
 
         Input updatedInput = new Input();
         updatedInput.setId(id);
         updatedInput.setTitres(titres);
         updatedInput.setMontants(montants);
-        updatedInput.setModePaiement(Input.ModePaiement.CARD);
+        updatedInput.setModePaiement(Input.ModePaiement.om);
 
         when(inputRepository.findById(id)).thenReturn(Optional.of(existingInput));
         when(inputRepository.save(any(Input.class))).thenReturn(updatedInput);
 
         // Act
-        Input result = inputService.updateInput(id, titres, montants, modePaiement);
+        Input result = inputService.updateInput(id, titres, montants, "om");
 
         // Assert
         assertNotNull(result);
         assertEquals(id, result.getId());
         assertEquals(titres, result.getTitres());
         assertEquals(montants, result.getMontants());
-        assertEquals(Input.ModePaiement.CARD, result.getModePaiement());
+        assertEquals(Input.ModePaiement.om, result.getModePaiement());
         verify(inputRepository, times(1)).findById(id);
         verify(inputRepository, times(1)).save(any(Input.class));
     }
@@ -149,7 +149,7 @@ public class InputServiceTest {
         Long id = 999L;
         String titres = "Updated Input";
         BigDecimal montants = new BigDecimal("1000.00");
-        String modePaiement = "CARD";
+        String modePaiement = "om";
 
         when(inputRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -247,16 +247,16 @@ public class InputServiceTest {
     public void testFindByModePaiement_Success() {
         // Arrange
         List<Input> inputs = Arrays.asList(mockInput);
-        when(inputRepository.findByModePaiement(Input.ModePaiement.CASH)).thenReturn(inputs);
+        when(inputRepository.findByModePaiement(Input.ModePaiement.cash)).thenReturn(inputs);
 
         // Act
-        List<Input> result = inputService.findByModePaiement(Input.ModePaiement.CASH);
+        List<Input> result = inputService.findByModePaiement(Input.ModePaiement.cash);
 
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals(mockInput, result.get(0));
-        verify(inputRepository, times(1)).findByModePaiement(Input.ModePaiement.CASH);
+        verify(inputRepository, times(1)).findByModePaiement(Input.ModePaiement.cash);
     }
 
     @Test
