@@ -135,8 +135,23 @@ class BackendApplicationTest {
         java.lang.reflect.Method[] methods = BackendApplication.class.getDeclaredMethods();
 
         // Assert
-        assertEquals(1, methods.length);
-        assertEquals("main", methods[0].getName());
+        // Compter seulement les méthodes non-JaCoCo
+        int nonJacocoMethodCount = 0;
+        boolean hasMainMethod = false;
+        
+        for (java.lang.reflect.Method method : methods) {
+            String methodName = method.getName();
+            // Ignorer les méthodes ajoutées par JaCoCo
+            if (!methodName.startsWith("$jacoco")) {
+                nonJacocoMethodCount++;
+                if ("main".equals(methodName)) {
+                    hasMainMethod = true;
+                }
+            }
+        }
+        
+        assertTrue(hasMainMethod, "La méthode main doit être présente");
+        assertEquals(1, nonJacocoMethodCount, "Il ne doit y avoir qu'une seule méthode non-JaCoCo (main)");
     }
 
     @Test
