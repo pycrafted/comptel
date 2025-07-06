@@ -199,6 +199,167 @@ public class DashboardControllerTest {
         assertEquals("0", stats.get("periodInvoicesPaid"));
     }
 
+    // Tests pour les blocs catch d'exception
+    @Test
+    public void testGetDashboardStats_Exception() {
+        // Arrange
+        when(invoiceRepository.findAll()).thenThrow(new RuntimeException("Erreur de base de données"));
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = dashboardController.getDashboardStats();
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().containsKey("error"));
+        assertTrue(response.getBody().get("error").toString().contains("Erreur lors de la récupération des statistiques"));
+    }
+
+    @Test
+    public void testGetStatsByPeriod_Exception() {
+        // Arrange
+        LocalDate startDate = LocalDate.now().minusDays(7);
+        LocalDate endDate = LocalDate.now();
+        
+        when(invoiceRepository.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenThrow(new RuntimeException("Erreur de base de données"));
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = dashboardController.getStatsByPeriod(startDate, endDate);
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().containsKey("error"));
+        assertTrue(response.getBody().get("error").toString().contains("Erreur lors de la récupération des statistiques"));
+    }
+
+    @Test
+    public void testGetActivityData_Exception() {
+        // Arrange
+        when(invoiceRepository.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenThrow(new RuntimeException("Erreur de base de données"));
+
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = dashboardController.getActivityData();
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertTrue(response.getBody().get(0).containsKey("error"));
+        assertTrue(response.getBody().get(0).get("error").toString().contains("Erreur lors de la récupération des données d'activité"));
+    }
+
+    // Tests pour les branches conditionnelles dans mapInvoiceToDashboardResponse via getDashboardStats
+    @Test
+    public void testMapInvoiceToDashboardResponse_FullyPaid() {
+        // Arrange
+        Invoice fullyPaidInvoice = new Invoice();
+        fullyPaidInvoice.setId(1L);
+        fullyPaidInvoice.setTotal(new BigDecimal("1000.00"));
+        fullyPaidInvoice.setAmountPaid(new BigDecimal("1000.00"));
+        fullyPaidInvoice.setBalance(BigDecimal.ZERO);
+        fullyPaidInvoice.setCustomer("Test Customer");
+        fullyPaidInvoice.setInvoiceDateTime(LocalDateTime.now());
+        fullyPaidInvoice.setDelivered(false);
+        
+        List<Invoice> invoices = Arrays.asList(fullyPaidInvoice);
+        when(invoiceRepository.findAll()).thenReturn(invoices);
+        when(invoiceRepository.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(invoices);
+        when(invoiceRepository.findTop5ByOrderByInvoiceDateTimeDesc()).thenReturn(invoices);
+        when(inputRepository.findByCreatedAtsBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(new ArrayList<>());
+        when(exitRepository.findByCreatedAtBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(new ArrayList<>());
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = dashboardController.getDashboardStats();
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> recentInvoices = (List<Map<String, Object>>) response.getBody().get("recentInvoices");
+        assertNotNull(recentInvoices);
+        assertEquals(1, recentInvoices.size());
+        assertEquals("payé", recentInvoices.get(0).get("status"));
+    }
+
+    @Test
+    public void testMapInvoiceToDashboardResponse_Unpaid() {
+        // Arrange
+        Invoice unpaidInvoice = new Invoice();
+        unpaidInvoice.setId(1L);
+        unpaidInvoice.setTotal(new BigDecimal("1000.00"));
+        unpaidInvoice.setAmountPaid(BigDecimal.ZERO);
+        unpaidInvoice.setBalance(new BigDecimal("1000.00"));
+        unpaidInvoice.setCustomer("Test Customer");
+        unpaidInvoice.setInvoiceDateTime(LocalDateTime.now());
+        unpaidInvoice.setDelivered(false);
+        
+        List<Invoice> invoices = Arrays.asList(unpaidInvoice);
+        when(invoiceRepository.findAll()).thenReturn(invoices);
+        when(invoiceRepository.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(invoices);
+        when(invoiceRepository.findTop5ByOrderByInvoiceDateTimeDesc()).thenReturn(invoices);
+        when(inputRepository.findByCreatedAtsBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(new ArrayList<>());
+        when(exitRepository.findByCreatedAtBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(new ArrayList<>());
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = dashboardController.getDashboardStats();
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> recentInvoices = (List<Map<String, Object>>) response.getBody().get("recentInvoices");
+        assertNotNull(recentInvoices);
+        assertEquals(1, recentInvoices.size());
+        assertEquals("non payé", recentInvoices.get(0).get("status"));
+    }
+
+    @Test
+    public void testMapInvoiceToDashboardResponse_PartialPayment() {
+        // Arrange
+        Invoice partialInvoice = new Invoice();
+        partialInvoice.setId(1L);
+        partialInvoice.setTotal(new BigDecimal("1000.00"));
+        partialInvoice.setAmountPaid(new BigDecimal("800.00"));
+        partialInvoice.setBalance(new BigDecimal("200.00"));
+        partialInvoice.setCustomer("Test Customer");
+        partialInvoice.setInvoiceDateTime(LocalDateTime.now());
+        partialInvoice.setDelivered(false);
+        
+        List<Invoice> invoices = Arrays.asList(partialInvoice);
+        when(invoiceRepository.findAll()).thenReturn(invoices);
+        when(invoiceRepository.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(invoices);
+        when(invoiceRepository.findTop5ByOrderByInvoiceDateTimeDesc()).thenReturn(invoices);
+        when(inputRepository.findByCreatedAtsBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(new ArrayList<>());
+        when(exitRepository.findByCreatedAtBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(new ArrayList<>());
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = dashboardController.getDashboardStats();
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> recentInvoices = (List<Map<String, Object>>) response.getBody().get("recentInvoices");
+        assertNotNull(recentInvoices);
+        assertEquals(1, recentInvoices.size());
+        assertEquals("en cours", recentInvoices.get(0).get("status"));
+    }
+
     @Test
     public void testGetActivityData_Success() {
         // Arrange

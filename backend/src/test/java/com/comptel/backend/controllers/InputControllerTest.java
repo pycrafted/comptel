@@ -180,6 +180,58 @@ public class InputControllerTest {
     }
 
     @Test
+    public void testCreateInput_Exception() {
+        // Arrange
+        Map<String, Object> request = new HashMap<>();
+        request.put("titres", "New Input");
+        request.put("montants", "invalid_amount");
+        request.put("modePaiement", "cash");
+        request.put("saveBy", 1L);
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = inputController.createInput(request);
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertNotNull(response.getBody().get("error"));
+    }
+
+    @Test
+    public void testUpdateInput_Exception() {
+        // Arrange
+        Map<String, Object> request = new HashMap<>();
+        request.put("titres", "Updated Input");
+        request.put("montants", "invalid_amount");
+        request.put("modePaiement", "om");
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = inputController.updateInput(1L, request);
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertNotNull(response.getBody().get("error"));
+    }
+
+    @Test
+    public void testDeleteInput_Exception() {
+        // Arrange
+        doThrow(new IllegalArgumentException("Input non trouvé : 999")).when(inputService).deleteInput(999L);
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = inputController.deleteInput(999L);
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertTrue(response.getBody().get("error").toString().contains("Input non trouvé"));
+    }
+
+    @Test
     public void testUpdateInput_Success() {
         // Arrange
         Map<String, Object> request = new HashMap<>();
@@ -242,6 +294,113 @@ public class InputControllerTest {
         assertEquals("500.00", byMode.get("cash"));
     }
 
+    @Test
+    public void testGetInputsByUser_Success() {
+        // Arrange
+        Long userId = 1L;
+        List<Input> inputs = Arrays.asList(mockInput);
+        when(inputService.findByUserId(userId)).thenReturn(inputs);
+
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = inputController.getInputsByUser(userId);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        
+        Map<String, Object> inputData = response.getBody().get(0);
+        assertEquals(1L, inputData.get("id"));
+        assertEquals("Test Input", inputData.get("titres"));
+        assertEquals(new BigDecimal("500.00"), inputData.get("montants"));
+        assertEquals("cash", inputData.get("modePaiement"));
+    }
+
+    @Test
+    public void testGetInputsByUser_EmptyList() {
+        // Arrange
+        Long userId = 999L;
+        when(inputService.findByUserId(userId)).thenReturn(new ArrayList<>());
+
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = inputController.getInputsByUser(userId);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(0, response.getBody().size());
+    }
+
+    @Test
+    public void testGetInputsByMode_EmptyList() {
+        // Arrange
+        when(inputService.findByModePaiement(Input.ModePaiement.om)).thenReturn(new ArrayList<>());
+
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = inputController.getInputsByMode(Input.ModePaiement.om);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(0, response.getBody().size());
+    }
+
+    @Test
+    public void testGetTotalsByDateRange_EmptyList() {
+        // Arrange
+        LocalDateTime start = LocalDateTime.now().minusDays(7);
+        LocalDateTime end = LocalDateTime.now();
+        when(inputService.findByDateRange(start, end)).thenReturn(new ArrayList<>());
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = inputController.getTotalsByDateRange(start, end);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("0", response.getBody().get("total"));
+        
+        @SuppressWarnings("unchecked")
+        Map<String, String> byMode = (Map<String, String>) response.getBody().get("byMode");
+        assertTrue(byMode.isEmpty());
+    }
+
+    @Test
+    public void testGetTotalsByDateRange_MultipleModes() {
+        // Arrange
+        LocalDateTime start = LocalDateTime.now().minusDays(7);
+        LocalDateTime end = LocalDateTime.now();
+        
+        // Créer des inputs avec différents modes de paiement
+        Input input1 = new Input();
+        input1.setId(1L);
+        input1.setTitres("Input 1");
+        input1.setMontants(new BigDecimal("300.00"));
+        input1.setModePaiement(Input.ModePaiement.cash);
+        
+        Input input2 = new Input();
+        input2.setId(2L);
+        input2.setTitres("Input 2");
+        input2.setMontants(new BigDecimal("200.00"));
+        input2.setModePaiement(Input.ModePaiement.om);
+        
+        List<Input> inputs = Arrays.asList(input1, input2);
+        when(inputService.findByDateRange(start, end)).thenReturn(inputs);
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = inputController.getTotalsByDateRange(start, end);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("500.00", response.getBody().get("total"));
+        
+        @SuppressWarnings("unchecked")
+        Map<String, String> byMode = (Map<String, String>) response.getBody().get("byMode");
+        assertEquals("300.00", byMode.get("cash"));
+        assertEquals("200.00", byMode.get("om"));
+    }
+
     // Test d'intégration avec MockMvc
     @SpringBootTest
     @AutoConfigureMockMvc
@@ -282,6 +441,34 @@ public class InputControllerTest {
                     .content(objectMapper.writeValueAsString(inputData)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
+        }
+
+        @Test
+        public void testGetInputsByMode_Integration() throws Exception {
+            mockMvc.perform(get("/api/inputs/by-mode/cash"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        public void testGetInputsByUser_Integration() throws Exception {
+            mockMvc.perform(get("/api/inputs/by-user/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
+        @Test
+        public void testGetTotalsByDateRange_Integration() throws Exception {
+            LocalDateTime start = LocalDateTime.now().minusDays(7);
+            LocalDateTime end = LocalDateTime.now();
+
+            mockMvc.perform(get("/api/inputs/totals/by-date-range")
+                    .param("start", start.toString())
+                    .param("end", end.toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.total").exists())
+                    .andExpect(jsonPath("$.byMode").exists());
         }
     }
 } 

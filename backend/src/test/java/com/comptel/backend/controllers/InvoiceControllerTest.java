@@ -423,6 +423,117 @@ public class InvoiceControllerTest {
         assertTrue(response.getBody().get(0).containsKey("error"));
     }
 
+    @Test
+    public void testGetAddInvoiceData_LastReferenceNull() {
+        // Arrange
+        when(serviceRepository.findAll()).thenReturn(new ArrayList<>());
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findMaxReference()).thenReturn(null);
+        GlobalSettings settings = new GlobalSettings();
+        when(globalSettingsRepository.findById(1L)).thenReturn(Optional.of(settings));
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = invoiceController.getAddInvoiceData();
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(8000, response.getBody().get("nextReference"));
+    }
+
+    @Test
+    public void testGetAddInvoiceData_Exception() {
+        // Arrange
+        when(serviceRepository.findAll()).thenThrow(new RuntimeException("Erreur service"));
+        // Act & Assert
+        assertThrows(Exception.class, () -> invoiceController.getAddInvoiceData());
+    }
+
+    @Test
+    public void testCreateInvoice_UserNotFound() {
+        // Arrange
+        Map<String, Object> request = new HashMap<>();
+        request.put("customer", "New Customer");
+        request.put("telephone", "987654321");
+        request.put("delivered", true);
+        request.put("invoiceDateTime", LocalDateTime.now().toString());
+        request.put("serviceIds", Arrays.asList(1L, 2L));
+        request.put("quantites", Arrays.asList(2, 1));
+        request.put("prixs", Arrays.asList("100.00", "200.00"));
+        request.put("mode_paiement", "CASH");
+        request.put("amountPaye", "300.00");
+        request.put("paymentDate", LocalDateTime.now().toString());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = invoiceController.createInvoice(request);
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(false, response.getBody().get("success"));
+        assertTrue(response.getBody().get("error").toString().contains("Utilisateur par défaut non trouvé"));
+    }
+
+    @Test
+    public void testPatchInvoce_UserNotFound() {
+        // Arrange
+        Long invoiceId = 1L;
+        Map<String, Object> body = new HashMap<>();
+        body.put("amountPaye", "100.00");
+        body.put("paymentDate", LocalDateTime.now().toString());
+        body.put("mode_paiement", "CASH");
+        body.put("livrer", "true");
+        body.put("paiement", "true");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act
+        ResponseEntity<?> response = invoiceController.patchInvoce(invoiceId, body);
+
+        // Assert
+        assertEquals(400, ((ResponseEntity<?>) response).getStatusCode().value());
+        assertNotNull(((ResponseEntity<?>) response).getBody());
+        assertTrue(((Map<?, ?>)((ResponseEntity<?>) response).getBody()).get("error").toString().contains("Utilisateur introuvable"));
+    }
+
+    @Test
+    public void testGetInvoicesByDateRange_Exception() {
+        // Arrange
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenThrow(new RuntimeException("Erreur DB"));
+
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = invoiceController.getInvoicesByDateRange(LocalDateTime.now(), LocalDateTime.now());
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().get(0).get("error").toString().contains("Erreur lors de la récupération des factures"));
+    }
+
+    @Test
+    public void testGetTotalsByDateRange_Exception() {
+        // Arrange
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenThrow(new RuntimeException("Erreur DB"));
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = invoiceController.getTotalsByDateRange(LocalDateTime.now(), LocalDateTime.now());
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        System.out.println("Erreur retournée : " + response.getBody().get("error"));
+        assertTrue(response.getBody().containsKey("error"));
+    }
+
     // Test d'intégration avec MockMvc
     @SpringBootTest
     @AutoConfigureMockMvc

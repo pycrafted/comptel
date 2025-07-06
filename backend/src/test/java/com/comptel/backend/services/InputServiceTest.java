@@ -285,4 +285,21 @@ public class InputServiceTest {
         assertNotNull(result);
         assertEquals(inputRepository, result);
     }
+
+    @Test
+    public void testCreateInput_RepositoryThrowsException_ShouldPropagate() {
+        // Arrange
+        String titres = "New Input";
+        BigDecimal montants = new BigDecimal("750.00");
+        String modePaiement = "cash";
+        Long userId = 1L;
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
+        when(inputRepository.save(any(Input.class))).thenThrow(new RuntimeException("Erreur DB"));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            inputService.createInput(titres, montants, modePaiement, userId);
+        });
+    }
 } 

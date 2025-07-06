@@ -5,6 +5,7 @@ import com.comptel.backend.services.UseImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -14,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -35,6 +37,9 @@ public class SecurityConfigTest {
 
     @Autowired
     private UseImpl useImpl;
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
     @Test
     public void testSecurityConfigBeanCreation() {
@@ -178,5 +183,19 @@ public class SecurityConfigTest {
         // Assert
         assertNotNull(encodedPassword);
         assertTrue(passwordEncoder.matches(rawPassword, encodedPassword));
+    }
+
+    @Test
+    public void testSecurityFilterChainBeanExistsInContext() {
+        // Act
+        String[] beanNames = applicationContext.getBeanNamesForType(SecurityFilterChain.class);
+
+        // Assert
+        assertTrue(beanNames.length > 0, "A SecurityFilterChain bean should exist in the context");
+        for (String beanName : beanNames) {
+            Object bean = applicationContext.getBean(beanName);
+            assertNotNull(bean);
+            assertTrue(bean instanceof SecurityFilterChain);
+        }
     }
 } 

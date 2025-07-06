@@ -477,4 +477,23 @@ class InvoiceServiceTest {
         // Assert
         assertFalse(String.class.isAssignableFrom(InvoiceService.class));
     }
+
+    @Test
+    void testCreateInvoice_RepositoryThrowsException_ShouldPropagate() {
+        // Arrange
+        List<Long> serviceIds = Arrays.asList(1L);
+        List<Integer> quantites = Arrays.asList(2);
+        List<BigDecimal> prixs = Arrays.asList(new BigDecimal("50.00"));
+        when(invoiceRepository.findMaxReference()).thenReturn(7999);
+        when(serviceRepository.findById(1L)).thenReturn(Optional.of(mockService));
+        when(invoiceRepository.save(any(Invoice.class))).thenThrow(new RuntimeException("Erreur DB"));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            invoiceService.createInvoice(
+                "Test Customer", "123456789", false, LocalDateTime.now(),
+                serviceIds, quantites, prixs, null, null, null, mockUser
+            );
+        });
+    }
 } 

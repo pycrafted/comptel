@@ -201,4 +201,10 @@ class BackendApplicationTest {
         // Assert
         assertFalse(String.class.isAssignableFrom(BackendApplication.class));
     }
+
+    @Test
+    void testMainMethodRunsWithoutException() {
+        // Act & Assert
+        assertDoesNotThrow(() -> BackendApplication.main(new String[]{}));
+    }
 } 

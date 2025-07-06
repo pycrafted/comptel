@@ -221,4 +221,53 @@ public class JwtServiceTest {
         // Act & Assert
         assertThrows(RuntimeException.class, () -> jwtService.getUsernameFromToken(malformedToken));
     }
+
+    // Tests supplémentaires pour couvrir les lignes manquantes
+    @Test
+    public void testValidateTokenWithNullToken() {
+        // Arrange
+        String nullToken = null;
+
+        // Act
+        boolean isValid = jwtService.validateToken(nullToken);
+
+        // Assert
+        assertFalse(isValid);
+    }
+
+    @Test
+    public void testValidateTokenWithEmptyToken() {
+        // Arrange
+        String emptyToken = "";
+
+        // Act
+        boolean isValid = jwtService.validateToken(emptyToken);
+
+        // Assert
+        assertFalse(isValid);
+    }
+
+    @Test
+    public void testValidateTokenWithTokenContainingOnlyDots() {
+        // Arrange
+        String invalidToken = "..";
+
+        // Act
+        boolean isValid = jwtService.validateToken(invalidToken);
+
+        // Assert
+        assertFalse(isValid);
+    }
+
+    @Test
+    public void testValidateTokenWithTokenContainingOneDot() {
+        // Arrange
+        String invalidToken = "invalid";
+
+        // Act
+        boolean isValid = jwtService.validateToken(invalidToken);
+
+        // Assert
+        assertFalse(isValid);
+    }
 }
