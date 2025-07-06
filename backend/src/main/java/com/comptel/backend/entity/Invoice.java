@@ -34,6 +34,9 @@ public class Invoice {
 
     // Méthode pour mettre à jour le solde
     public void updateBalance() {
+        if (this.amountPaid == null) {
+            this.amountPaid = BigDecimal.ZERO;
+        }
         this.balance = this.total.subtract(this.amountPaid);
     }
 
