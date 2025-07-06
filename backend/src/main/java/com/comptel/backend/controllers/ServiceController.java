@@ -74,7 +74,16 @@ public class ServiceController {
             // Extraction des données de la requête
             String designation = (String) request.get("designation");
             Object prixObj = request.get("prix");
-            BigDecimal prix = prixObj instanceof Number ? new BigDecimal(prixObj.toString()) : (BigDecimal) prixObj;
+            BigDecimal prix;
+            if (prixObj instanceof BigDecimal) {
+                prix = (BigDecimal) prixObj;
+            } else if (prixObj instanceof Number) {
+                prix = BigDecimal.valueOf(((Number) prixObj).doubleValue());
+            } else if (prixObj instanceof String) {
+                prix = new BigDecimal((String) prixObj);
+            } else {
+                throw new IllegalArgumentException("Type de prix non supporté: " + (prixObj == null ? "null" : prixObj.getClass()));
+            }
             String proposition = (String) request.get("proposition");
 
             // Création de services

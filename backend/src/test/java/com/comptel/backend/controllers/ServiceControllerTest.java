@@ -189,6 +189,64 @@ public class ServiceControllerTest {
         });
     }
 
+    @Test
+    public void testCreateService_WithNumberPrice() {
+        // Arrange
+        Map<String, Object> request = new HashMap<>();
+        request.put("designation", "Number Price Service");
+        request.put("prix", 150); // Integer au lieu de BigDecimal
+        request.put("proposition", "Number Price Proposition");
+
+        Service newService = new Service();
+        newService.setId(3L);
+        newService.setDesignation("Number Price Service");
+        newService.setPrix(new BigDecimal("150"));
+        newService.setProposition("Number Price Proposition");
+
+        when(serviceF.CreateServiceEntity(eq("Number Price Service"), argThat(bd -> bd.compareTo(new BigDecimal("150")) == 0), eq("Number Price Proposition")))
+                .thenReturn(newService);
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = serviceController.CreatService(request);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(true, response.getBody().get("success"));
+        assertEquals("Number Price Service", response.getBody().get("designation"));
+        assertEquals("Number Price Proposition", response.getBody().get("proposition"));
+        assertEquals(new BigDecimal("150"), response.getBody().get("prix"));
+    }
+
+    @Test
+    public void testCreateService_WithDoublePrice() {
+        // Arrange
+        Map<String, Object> request = new HashMap<>();
+        request.put("designation", "Double Price Service");
+        request.put("prix", 150.50); // Double au lieu de BigDecimal
+        request.put("proposition", "Double Price Proposition");
+
+        Service newService = new Service();
+        newService.setId(4L);
+        newService.setDesignation("Double Price Service");
+        newService.setPrix(new BigDecimal("150.50"));
+        newService.setProposition("Double Price Proposition");
+
+        when(serviceF.CreateServiceEntity(eq("Double Price Service"), argThat(bd -> bd.compareTo(new BigDecimal("150.50")) == 0), eq("Double Price Proposition")))
+                .thenReturn(newService);
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = serviceController.CreatService(request);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(true, response.getBody().get("success"));
+        assertEquals("Double Price Service", response.getBody().get("designation"));
+        assertEquals("Double Price Proposition", response.getBody().get("proposition"));
+        assertEquals(new BigDecimal("150.50"), response.getBody().get("prix"));
+    }
+
     // Test d'intégration avec MockMvc
     @SpringBootTest
     @AutoConfigureMockMvc

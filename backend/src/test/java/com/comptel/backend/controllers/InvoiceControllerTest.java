@@ -24,6 +24,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -275,6 +276,151 @@ public class InvoiceControllerTest {
         assertNotNull(response.getBody());
         assertEquals(8001, response.getBody().get("nextReference"));
         assertEquals(services, response.getBody().get("services"));
+    }
+
+    @Test
+    public void testGetTotalsByDateRange_Success() {
+        // Arrange
+        LocalDateTime startDate = LocalDateTime.now().minusDays(7);
+        LocalDateTime endDate = LocalDateTime.now();
+        
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        
+        // Mock des données de factures
+        List<Invoice> invoices = Arrays.asList(mockInvoice);
+        when(mockRepo.findByInvoiceDateTimeBetween(startDate, endDate)).thenReturn(invoices);
+        
+        // Act
+        ResponseEntity<Map<String, Object>> response = invoiceController.getTotalsByDateRange(startDate, endDate);
+        
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().containsKey("totalAmount"));
+        assertTrue(response.getBody().containsKey("totalPaid"));
+        assertTrue(response.getBody().containsKey("totalBalance"));
+        assertTrue(response.getBody().containsKey("invoiceCount"));
+    }
+
+    @Test
+    public void testGetJournalByDate_Success() {
+        // Arrange
+        LocalDate date = LocalDate.now();
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59, 999999999);
+        
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        
+        List<Invoice> invoices = Arrays.asList(mockInvoice);
+        when(mockRepo.findByInvoiceDateTimeBetween(startOfDay, endOfDay)).thenReturn(invoices);
+        
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = invoiceController.getJournalByDate(date);
+        
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+    }
+
+    @Test
+    public void testExtractLongList_WithVariousTypes() throws Exception {
+        // Arrange
+        Map<String, Object> request = new HashMap<>();
+        List<Object> list = new ArrayList<>();
+        list.add(1); // Integer
+        list.add(2L); // Long
+        list.add("3"); // String
+        request.put("serviceIds", list);
+        // Act
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("extractLongList", Map.class, String.class);
+        m.setAccessible(true);
+        List<Long> result = (List<Long>) m.invoke(invoiceController, request, "serviceIds");
+        // Assert
+        assertEquals(Arrays.asList(1L, 2L, 3L), result);
+    }
+
+    @Test
+    public void testExtractLongList_WithInvalidType() throws Exception {
+        Map<String, Object> request = new HashMap<>();
+        List<Object> list = new ArrayList<>();
+        list.add(new Object());
+        request.put("serviceIds", list);
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("extractLongList", Map.class, String.class);
+        m.setAccessible(true);
+        Exception ex = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> m.invoke(invoiceController, request, "serviceIds"));
+        assertTrue(ex.getCause() instanceof IllegalArgumentException);
+    }
+
+    @Test
+    public void testExtractIntegerList_Null() throws Exception {
+        Map<String, Object> request = new HashMap<>();
+        request.put("quantites", null);
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("extractIntegerList", Map.class, String.class);
+        m.setAccessible(true);
+        List<Integer> result = (List<Integer>) m.invoke(invoiceController, request, "quantites");
+        assertNull(result);
+    }
+
+    @Test
+    public void testExtractBigDecimalList_Null() throws Exception {
+        Map<String, Object> request = new HashMap<>();
+        request.put("prixs", null);
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("extractBigDecimalList", Map.class, String.class);
+        m.setAccessible(true);
+        Exception ex = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> m.invoke(invoiceController, request, "prixs"));
+        assertTrue(ex.getCause() instanceof NullPointerException);
+    }
+
+    @Test
+    public void testParseDateTime_Null() throws Exception {
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("parseDateTime", String.class);
+        m.setAccessible(true);
+        assertNull(m.invoke(invoiceController, (Object) null));
+    }
+
+    @Test
+    public void testParsePaymentMode_Null() throws Exception {
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("parsePaymentMode", String.class);
+        m.setAccessible(true);
+        assertNull(m.invoke(invoiceController, (Object) null));
+    }
+
+    @Test
+    public void testParseBigDecimal_Null() throws Exception {
+        java.lang.reflect.Method m = InvoiceController.class.getDeclaredMethod("parseBigDecimal", String.class);
+        m.setAccessible(true);
+        assertNull(m.invoke(invoiceController, (Object) null));
+    }
+
+    @Test
+    public void testGetInvoicesByDateRange_BadRequest() {
+        // Arrange
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findByInvoiceDateTimeBetween(any(), any())).thenThrow(new RuntimeException("Erreur DB"));
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = invoiceController.getInvoicesByDateRange(LocalDateTime.now(), LocalDateTime.now());
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().get(0).containsKey("error"));
+    }
+
+    @Test
+    public void testGetJournalByDate_BadRequest() {
+        // Arrange
+        com.comptel.backend.repository.InvoiceRepository mockRepo = mock(com.comptel.backend.repository.InvoiceRepository.class);
+        when(invoiceService.getInvoiceRepository()).thenReturn(mockRepo);
+        when(mockRepo.findByInvoiceDateTimeBetween(any(), any())).thenThrow(new RuntimeException("Erreur DB"));
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = invoiceController.getJournalByDate(LocalDate.now());
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().get(0).containsKey("error"));
     }
 
     // Test d'intégration avec MockMvc

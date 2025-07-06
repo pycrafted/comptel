@@ -199,6 +199,38 @@ public class DashboardControllerTest {
         assertEquals("0", stats.get("periodInvoicesPaid"));
     }
 
+    @Test
+    public void testGetActivityData_Success() {
+        // Arrange
+        List<Invoice> invoices = Arrays.asList(mockInvoice);
+        List<Input> inputs = Arrays.asList(mockInput);
+        List<Exit> exits = Arrays.asList(mockExit);
+
+        // Pour chaque jour, on mocke les retours
+        when(invoiceRepository.findByInvoiceDateTimeBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(invoices);
+        when(inputRepository.findByCreatedAtsBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(inputs);
+        when(exitRepository.findByCreatedAtBetween(any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(exits);
+
+        // Act
+        ResponseEntity<List<Map<String, Object>>> response = dashboardController.getActivityData();
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(7, response.getBody().size());
+        for (Map<String, Object> dayData : response.getBody()) {
+            assertTrue(dayData.containsKey("date"));
+            assertTrue(dayData.containsKey("dayName"));
+            assertTrue(dayData.containsKey("invoices"));
+            assertTrue(dayData.containsKey("invoicesAmount"));
+            assertTrue(dayData.containsKey("inputsAmount"));
+            assertTrue(dayData.containsKey("exitsAmount"));
+        }
+    }
+
     // Test d'intégration avec MockMvc
     @SpringBootTest
     @AutoConfigureMockMvc
