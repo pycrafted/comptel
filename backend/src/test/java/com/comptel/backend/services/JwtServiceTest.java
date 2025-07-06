@@ -2,12 +2,15 @@ package com.comptel.backend.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 
 import java.lang.reflect.Field;
 import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class JwtServiceTest {
 
@@ -72,5 +75,150 @@ public class JwtServiceTest {
         // Act & Assert
         assertFalse(jwtService.validateToken(invalidToken));
         assertThrows(Exception.class, () -> jwtService.getUsernameFromToken(invalidToken));
+    }
+
+    @Test
+    public void testGetAuthUserWithValidToken() {
+        // Arrange
+        String username = "testuser";
+        String token = jwtService.getToken(username);
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer " + token);
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertEquals(username, result);
+    }
+
+    @Test
+    public void testGetAuthUserWithNoAuthorizationHeader() {
+        // Arrange
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(null);
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAuthUserWithInvalidPrefix() {
+        // Arrange
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("InvalidPrefix token");
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAuthUserWithInvalidToken() {
+        // Arrange
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer invalid.token.here");
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAuthUserWithExpiredToken() throws Exception {
+        // Arrange
+        String username = "testuser";
+        String token = jwtService.getToken(username);
+        
+        // Créer un token expiré en utilisant la réflexion pour modifier la date d'expiration
+        Field keyField = JwtService.class.getDeclaredField("key");
+        keyField.setAccessible(true);
+        Object key = keyField.get(null);
+
+        Claims claims = Jwts.parser()
+                .setSigningKey((java.security.Key) key)
+                .parseClaimsJws(token)
+                .getBody();
+
+        // Créer un nouveau token avec une date d'expiration passée
+        String expiredToken = Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis() - 86400000)) // 24h dans le passé
+                .setExpiration(new Date(System.currentTimeMillis() - 3600000)) // 1h dans le passé
+                .signWith((java.security.Key) key)
+                .compact();
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer " + expiredToken);
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAuthUserWithEmptyToken() {
+        // Arrange
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer ");
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetAuthUserWithMalformedToken() {
+        // Arrange
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer malformed.token");
+
+        // Act
+        String result = jwtService.getAuthUser(request);
+
+        // Assert
+        assertNull(result);
+    }
+
+    @Test
+    public void testGetUsernameFromTokenWithExpiredToken() throws Exception {
+        // Arrange
+        String username = "testuser";
+        String token = jwtService.getToken(username);
+        
+        // Créer un token expiré
+        Field keyField = JwtService.class.getDeclaredField("key");
+        keyField.setAccessible(true);
+        Object key = keyField.get(null);
+
+        String expiredToken = Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date(System.currentTimeMillis() - 86400000))
+                .setExpiration(new Date(System.currentTimeMillis() - 3600000))
+                .signWith((java.security.Key) key)
+                .compact();
+
+        // Act & Assert
+        assertThrows(Exception.class, () -> jwtService.getUsernameFromToken(expiredToken));
+    }
+
+    @Test
+    public void testGetUsernameFromTokenWithMalformedToken() {
+        // Arrange
+        String malformedToken = "malformed.token.here";
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> jwtService.getUsernameFromToken(malformedToken));
     }
 }

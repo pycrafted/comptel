@@ -180,4 +180,191 @@ public class UserTest {
         user.setId(null);
         assertNull(user.getId());
     }
+
+    @Test
+    public void testEqualsAndHashCode() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(1L);
+        User user3 = new User("user2", "pass2", false);
+        user3.setId(2L);
+
+        assertEquals(user1, user2);
+        assertEquals(user1.hashCode(), user2.hashCode());
+        assertNotEquals(user1, user3);
+        assertNotEquals(user1.hashCode(), user3.hashCode());
+        assertNotEquals(user2, null);
+        assertNotEquals(user2, "string");
+        assertEquals(user2, user2); // reflexivité
+    }
+
+    @Test
+    public void testEqualsWithDifferentIds() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(2L);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithNullId() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(null);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(null);
+
+        assertEquals(user1, user2);
+        assertEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithOneNullId() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(null);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithDifferentUsernames() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user2", "pass1", true);
+        user2.setId(1L);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithNullUsername() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        user1.setUsername(null);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(1L);
+        user2.setUsername(null);
+
+        assertEquals(user1, user2);
+        assertEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithOneNullUsername() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(1L);
+        user2.setUsername(null);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithDifferentPasswords() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass2", true);
+        user2.setId(1L);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithNullPassword() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        user1.setPassword(null);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(1L);
+        user2.setPassword(null);
+
+        assertEquals(user1, user2);
+        assertEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithOneNullPassword() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(1L);
+        user2.setPassword(null);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithDifferentRoles() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", false);
+        user2.setId(1L);
+
+        assertNotEquals(user1, user2);
+        assertNotEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testEqualsWithNullObject() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+
+        assertNotEquals(user1, null);
+    }
+
+    @Test
+    public void testEqualsWithDifferentClass() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+
+        assertNotEquals(user1, "not a user");
+        assertNotEquals(user1, new Object());
+    }
+
+    @Test
+    public void testHashCodeConsistency() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(1L);
+        User user2 = new User("user1", "pass1", true);
+        user2.setId(1L);
+
+        // Le hashCode doit être cohérent
+        assertEquals(user1.hashCode(), user1.hashCode());
+        assertEquals(user2.hashCode(), user2.hashCode());
+        assertEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    public void testHashCodeWithNullValues() {
+        User user1 = new User("user1", "pass1", true);
+        user1.setId(null);
+        user1.setUsername(null);
+        user1.setPassword(null);
+
+        // Le hashCode ne doit pas lever d'exception avec des valeurs null
+        assertNotNull(user1.hashCode());
+    }
+
+    @Test
+    public void testToStringContainsFields() {
+        User user = new User("userX", "passX", true);
+        user.setId(42L);
+        String str = user.toString();
+        assertTrue(str.contains("User"));
+        assertTrue(str.contains("userX"));
+        assertTrue(str.contains("passX"));
+        assertTrue(str.contains("true"));
+        assertTrue(str.contains("42"));
+    }
 } 
